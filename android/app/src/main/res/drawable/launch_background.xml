@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The field, so the handoff from the OS launch window into the splash's
+         200ms container fade is seamless. No white flash. -->
+    <item android:drawable="@color/brew_field" />
+</layer-list>

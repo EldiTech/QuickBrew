@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickBrew &mdash; Website Admin Portal</title>
+  <meta name="description" content="QuickBrew Official Website Administration Console. Manage APK releases, download statistics, landing page content, and announcements.">
+  <link rel="icon" type="image/png" href="assets/app_icon.png">
+
+  <!-- Typography: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Firebase App & Services Compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+  <!-- ========================================================================
+       1. Login Screen (Unauthenticated)
+       ======================================================================== -->
+  <div class="login-view-wrapper" id="loginViewWrapper">
+    <!-- 3D Perspective Stage -->
+    <div class="login-3d-stage" id="login3dStage">
+      <!-- Ambient 3D Neon Backlight -->
+      <div class="login-3d-backlight" id="login3dBacklight"></div>
+
+      <div class="login-card" id="loginCard">
+        <div class="login-header">
+          <div class="login-brand-icon">
+            <img src="assets/app_icon.png" alt="QuickBrew Logo">
+          </div>
+          <h1 class="login-title">Website Admin</h1>
+          <p class="login-subtitle">QuickBrew Landing Page &amp; Release Portal</p>
+        </div>
+
+        <div class="error-banner" id="errorBanner"></div>
+
+        <form id="adminLoginForm">
+          <div class="form-group">
+            <label class="form-label" for="adminEmail">Admin Username or Email</label>
+            <input type="text" id="adminEmail" class="form-control" required autocomplete="username">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="adminPassword">Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="adminPassword" class="form-control" required autocomplete="current-password">
+              <button type="button" class="btn-toggle-pwd" id="togglePwdBtn" aria-label="Toggle password visibility">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-admin-submit" id="btnAdminSubmit">
+            <span>Sign In to Web Admin</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </form>
+
+        <div class="login-back-link">
+          <a href="index.html">&larr; Return to Download Website</a>
+        </div>
+      </div>
+
+      <!-- 3D Holographic Portal Overlay (activates on successful login) -->
+      <div class="login-3d-portal" id="login3dPortal">
+        <div class="portal-rings-container">
+          <div class="portal-ring ring-1"></div>
+          <div class="portal-ring ring-2"></div>
+          <div class="portal-ring ring-3"></div>
+          <div class="portal-core">
+            <svg class="portal-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="portal-particles" id="portalParticles"></div>
+        <div class="portal-text-badge">
+          <span class="portal-badge-dot"></span>
+          <span class="portal-badge-text" id="portalBadgeText">SECURITY CLEARANCE VERIFIED</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       2. Authenticated Website Admin Dashboard
+       ======================================================================== -->
+  <div class="admin-dashboard-wrapper" id="adminDashboardWrapper">
+    <!-- Top Bar -->
+    <header class="admin-navbar">
+      <div class="admin-nav-left">
+        <a href="index.html" class="admin-logo-group" target="_blank" title="Preview public website in new tab">
+          <div class="admin-logo-icon">
+            <img src="assets/app_icon.png" alt="QuickBrew Logo">
+          </div>
+          <div>
+            <div class="admin-brand-title">Website Admin</div>
+          </div>
+        </a>
+        <span class="admin-badge-pill">quickbrew-murex.vercel.app</span>
+      </div>
+
+      <div class="admin-nav-right">
+        <!-- Mobile App Maintenance Lock Quick Switch -->
+        <button class="store-status-toggle" id="appLockStatusBtn" title="Toggle Mobile App Maintenance Lock">
+          <span class="status-indicator-dot lock-dot" id="appLockIndicatorDot"></span>
+          <span id="appLockStatusText">App Online</span>
+        </button>
+
+        <!-- Live Download Status Toggle -->
+        <button class="store-status-toggle" id="downloadStatusBtn" title="Toggle website APK download button status">
+          <span class="status-indicator-dot"></span>
+          <span id="downloadStatusText">Downloads Active</span>
+        </button>
+
+        <div class="admin-user-menu">
+          <span class="admin-email-tag" id="adminUserEmail">Admin</span>
+          <a href="index.html" target="_blank" class="btn-admin-logout" style="text-decoration:none;">View Site &nearr;</a>
+          <button class="btn-admin-logout" id="adminLogoutBtn">Log Out</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sub Navigation Tabs for Website Management -->
+    <nav class="admin-tabs-bar">
+      <button class="tab-btn active" data-tab="tabAppLock" id="tabBtnAppLock">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Mobile App Lock</span>
+      </button>
+      <button class="tab-btn" data-tab="tabReleases">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span>APK &amp; Releases</span>
+      </button>
+      <button class="tab-btn" data-tab="tabContent">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span>Landing Page Content</span>
+      </button>
+      <button class="tab-btn" data-tab="tabBanner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Notice &amp; Announcements</span>
+      </button>
+      <button class="tab-btn" data-tab="tabSettings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>SEO &amp; Links</span>
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="admin-content-area">
+      <!-- Top Metrics Row -->
+      <section class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Active Release Build</span>
+            <div class="metric-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+          </div>
+          <div class="metric-val" style="font-size: 1.6rem;" id="metricVersion">v1.0.0</div>
+          <div class="metric-sub" id="metricApkSub">55.1 MB &bull; Android 6.0+</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Deployment Status</span>
+            <div class="metric-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
+          <div class="metric-val" style="font-size: 1.4rem; color: var(--accent-green);">100% Ready</div>
+          <div class="metric-sub">Global Edge CDN Cached</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Mobile App Status</span>
+            <div class="metric-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+          </div>
+          <div class="metric-val" style="font-size: 1.4rem; color: var(--accent-green);" id="metricAppStatus">Online</div>
+          <div class="metric-sub" id="metricAppStatusSub">Mobile Ordering Active</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <span class="metric-label">Cloud Sync State</span>
+            <div class="metric-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+            </div>
+          </div>
+          <div class="metric-val" style="font-size: 1.4rem; color: var(--accent-sage-light);">Connected</div>
+          <div class="metric-sub">Firestore Live Database</div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           TAB: MOBILE APP MAINTENANCE LOCK (REDESIGNED MISSION CONTROL)
+           ==================================================================== -->
+      <div class="tab-pane active" id="tabAppLock">
+        <div class="applock-mission-control">
+          
+          <!-- Left Column: Command & Broadcast Controls -->
+          <div class="applock-control-panel">
+            
+            <!-- Hero Status Matrix Card -->
+            <div id="appLockAlertBanner" class="applock-hero-status normal">
+              <div class="hero-status-radar">
+                <div class="radar-pulse"></div>
+                <div class="radar-core" id="appLockBannerIcon">
+                  <span class="status-indicator-dot" style="width: 12px; height: 12px; display: inline-block;"></span>
+                </div>
+              </div>
+              <div class="hero-status-info">
+                <div class="hero-status-badge-row">
+                  <span class="hero-status-pill" id="appLockPill">STORE ONLINE</span>
+                  <span class="hero-telemetry"><span class="pulse-dot-green"></span> Firestore Real-time Sync Active</span>
+                </div>
+                <h3 class="hero-status-title" id="appLockBannerTitle">Mobile Ordering is Online &amp; Accessible</h3>
+                <p class="hero-status-desc" id="appLockBannerDesc">All customers can browse menus, customize coffee drinks, and place orders without restriction.</p>
+              </div>
+            </div>
+
+            <!-- Master Toggle Switch Box -->
+            <div class="applock-master-switch-card" id="appLockToggleCard">
+              <div class="switch-card-info">
+                <div class="switch-title-row">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span class="switch-card-title">Master Lockout Switch</span>
+                </div>
+                <p class="switch-card-desc">Arm or disarm full-screen maintenance lockout across all active customer Flutter app instances instantly.</p>
+              </div>
+              <label class="switch-toggle switch-lg">
+                <input type="checkbox" id="cfgAppLockActive">
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Form: Configuration & Presets -->
+            <form id="appLockConfigForm" class="applock-composer-form">
+              
+              <!-- Quick Preset Chips -->
+              <div class="form-group">
+                <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>QUICK PRESET BROADCASTS</span>
+                  <span style="color: var(--ink-faint); font-weight: normal; text-transform: none; font-size: 0.7rem;">Click template to apply</span>
+                </label>
+                <div class="preset-chips-grid">
+                  <button type="button" class="preset-chip" data-msg="QuickBrew is undergoing scheduled maintenance and system optimization. Mobile ordering will resume shortly!" data-est="Approx. 15-30 minutes">
+                    <span class="chip-icon">⚡</span>
+                    <span class="chip-label">Scheduled Update</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-msg="Our baristas are currently restocking fresh beans, milk, and specialty ingredients. Brewing restarts soon!" data-est="Approx. 10-15 minutes">
+                    <span class="chip-icon">☕</span>
+                    <span class="chip-label">Bean Restock</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-msg="Thank you for visiting Seven Coffee &amp; Tea! We are now closed for the night. Pre-orders open tomorrow at 7:00 AM." data-est="Reopens Tomorrow 7:00 AM">
+                    <span class="chip-icon">🌙</span>
+                    <span class="chip-label">Night Closing</span>
+                  </button>
+                  <button type="button" class="preset-chip" data-msg="Mobile ordering is momentarily paused to manage counter rush volume. We are clearing queued tickets now!" data-est="Approx. 5-10 minutes">
+                    <span class="chip-icon">🚨</span>
+                    <span class="chip-label">Rush Pause</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lockout Notice Textarea -->
+              <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <label class="form-label" for="cfgAppLockMessage" style="margin-bottom: 0;">LOCKOUT NOTICE MESSAGE (DISPLAYED TO CUSTOMERS)</label>
+                  <span class="char-counter" id="msgCharCount">0 / 250</span>
+                </div>
+                <textarea id="cfgAppLockMessage" class="form-control modern-textarea" rows="3" maxlength="250" placeholder="Custom message displayed in customer mobile app...">QuickBrew is currently undergoing scheduled updates and maintenance. Mobile ordering is temporarily paused. Please check back shortly!</textarea>
+                <div class="field-hint">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span>Mirrored live on the phone preview and synchronized with Firestore <code>system/maintenance</code>.</span>
+                </div>
+              </div>
+
+              <!-- Estimated Downtime / Reopen Note -->
+              <div class="form-group">
+                <label class="form-label" for="cfgAppLockEst">ESTIMATED DOWNTIME / REOPEN NOTE</label>
+                <div class="input-with-presets">
+                  <input type="text" id="cfgAppLockEst" class="form-control" value="Approx. 15-30 minutes" placeholder="e.g. Approx. 15-30 minutes">
+                  <div class="quick-time-pills">
+                    <button type="button" class="time-pill" data-time="Approx. 10-15 minutes">15m</button>
+                    <button type="button" class="time-pill" data-time="Approx. 30 minutes">30m</button>
+                    <button type="button" class="time-pill" data-time="Approx. 1 hour">1h</button>
+                    <button type="button" class="time-pill" data-time="Reopens Tomorrow 7:00 AM">Tomorrow</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Bar -->
+              <div class="applock-action-bar">
+                <button type="submit" class="btn-broadcast-primary" id="btnSaveAppLock">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 2L11 13"/>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                  </svg>
+                  <span>Broadcast Status to Mobile App</span>
+                </button>
+                <button type="button" class="btn-instant-toggle" id="btnQuickToggleLock">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                  <span>Instant 1-Click Toggle</span>
+                </button>
+              </div>
+
+              <!-- Audit & Security Metadata Strip -->
+              <div class="applock-meta-strip">
+                <div class="meta-strip-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>LAST BROADCAST: <strong id="appLockLastBroadcast">Active session</strong></span>
+                </div>
+                <div class="meta-strip-item security">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span>Staff &amp; Admin Sign In bypass available on device</span>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right Column: Flagship Smartphone Interactive Live Preview -->
+          <div class="applock-preview-column">
+            <div class="preview-header">
+              <div class="preview-title-group">
+                <span class="preview-live-badge"><span class="badge-dot"></span> LIVE MIRROR</span>
+                <span class="preview-title">Flutter Customer App View</span>
+              </div>
+              <div class="preview-mode-switch">
+                <button type="button" class="preview-mode-btn active" id="btnPreviewLockoutMode" title="Preview lockout appearance">Lockout</button>
+                <button type="button" class="preview-mode-btn" id="btnPreviewStoreMode" title="Preview normal store menu">Store</button>
+              </div>
+            </div>
+
+            <!-- Realistic Smartphone Device Chassis -->
+            <div class="smartphone-frame" id="mockLockoutPreview">
+              <!-- Metallic Volume / Power Buttons -->
+              <div class="phone-btn phone-btn-vol-up"></div>
+              <div class="phone-btn phone-btn-vol-down"></div>
+              <div class="phone-btn phone-btn-power"></div>
+
+              <!-- Outer Bezel & Screen Glass -->
+              <div class="smartphone-screen">
+                <div class="screen-glass-sheen"></div>
+                
+                <!-- Status Bar & Dynamic Island -->
+                <div class="phone-status-bar">
+                  <span class="status-time">9:41</span>
+                  <div class="dynamic-island">
+                    <div class="island-camera"></div>
+                  </div>
+                  <div class="status-icons">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <div class="battery-icon"><div class="battery-fill"></div></div>
+                  </div>
+                </div>
+
+                <!-- Live Customer App Screen Content -->
+                <div class="phone-app-content" id="phoneAppContent">
+                  
+                  <!-- STATE A: Lockout Screen (Active when maintenance is on) -->
+                  <div class="phone-lockout-view" id="phoneLockoutView">
+                    <!-- Frosted Status Badge -->
+                    <div class="mock-lockout-badge" id="mockBadge">
+                      <span class="mock-dot"></span>
+                      <span id="mockBadgeText">MAINTENANCE IN PROGRESS</span>
+                    </div>
+
+                    <!-- Illuminated Coffee Medallion with Rising Steam -->
+                    <div class="mock-medallion-container">
+                      <div class="medallion-halo"></div>
+                      <div class="medallion-ring-outer"></div>
+                      <div class="medallion-ring-inner">
+                        <div class="steam-container">
+                          <div class="steam-line steam-1"></div>
+                          <div class="steam-line steam-2"></div>
+                          <div class="steam-line steam-3"></div>
+                        </div>
+                        <svg class="medallion-cup-icon" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                          <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                        </svg>
+                      </div>
+                    </div>
+
+                    <!-- Headline & Shimmer Divider -->
+                    <div class="mock-lockout-title" id="mockTitle">Service Paused</div>
+                    <div class="mock-shimmer-divider"></div>
+
+                    <!-- Customer Notice Card -->
+                    <div class="mock-notice-card">
+                      <div class="mock-lockout-msg" id="mockMsgText">
+                        QuickBrew is currently undergoing scheduled updates and maintenance. Mobile ordering is temporarily paused. Please check back shortly!
+                      </div>
+                      <div class="mock-est-pill" id="mockEstPill">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <span id="mockEstText">Approx. 15-30 minutes</span>
+                      </div>
+                    </div>
+
+                    <!-- Action Button & Bypass -->
+                    <button type="button" class="mock-lockout-btn" id="mockActionBtn">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                      <span>Check If Back Online</span>
+                    </button>
+                    <div class="mock-lockout-link">Store Manager Sign In &rarr;</div>
+                  </div>
+
+                  <!-- STATE B: Normal Store Screen (When store is online or previewed) -->
+                  <div class="phone-store-view" id="phoneStoreView" style="display: none;">
+                    <div class="store-preview-nav">
+                      <div class="store-brand">
+                        <img src="assets/app_icon.png" alt="Logo" class="store-brand-icon">
+                        <div>
+                          <div class="store-brand-name">Seven Coffee &amp; Tea</div>
+                          <div class="store-brand-sub">Brewing Fresh Daily</div>
+                        </div>
+                      </div>
+                      <div class="store-cart-badge">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                      </div>
+                    </div>
+
+                    <div class="store-promo-card">
+                      <span class="promo-tag">SEVEN SIGNATURES</span>
+                      <div class="promo-name">Caramel Cloud Macchiato</div>
+                      <div class="promo-price">₱145.00</div>
+                    </div>
+
+                    <div class="store-menu-list">
+                      <div class="store-menu-item">
+                        <div class="item-info">
+                          <span class="item-title">Matcha Berry Foam</span>
+                          <span class="item-price">₱160.00</span>
+                        </div>
+                        <span class="item-add">+</span>
+                      </div>
+                      <div class="store-menu-item">
+                        <div class="item-info">
+                          <span class="item-title">Spanish Latte (Oat)</span>
+                          <span class="item-price">₱150.00</span>
+                        </div>
+                        <span class="item-add">+</span>
+                      </div>
+                    </div>
+
+                    <div class="store-order-status-bar">
+                      <span class="pulse-dot-green"></span>
+                      <span>Ordering Live • 12-15m Brew Time</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <!-- Bottom Gesture Bar -->
+                <div class="phone-home-indicator"></div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 2: APK & RELEASE MANAGEMENT
+           ==================================================================== -->
+      <div class="tab-pane" id="tabReleases">
+        <div class="config-card">
+          <h3 class="config-section-title">Active Release Details</h3>
+
+          <form id="releaseConfigForm">
+            <div class="admin-grid-2col">
+              <div class="form-group">
+                <label class="form-label">Version Label</label>
+                <input type="text" id="cfgVersionTag" class="form-control" value="v1.0.0 Stable" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Build Number</label>
+                <input type="text" id="cfgBuildNumber" class="form-control" value="1.0.0+1" required>
+              </div>
+            </div>
+
+            <div class="admin-grid-2col">
+              <div class="form-group">
+                <label class="form-label">Reported File Size</label>
+                <input type="text" id="cfgApkSize" class="form-control" value="55.1 MB" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Minimum Android Version</label>
+                <input type="text" id="cfgMinAndroid" class="form-control" value="Android 6.0+ (Marshmallow)" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Direct APK Download Filename</label>
+              <input type="text" id="cfgApkFileName" class="form-control" value="quickbrew-release.apk" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">SHA-256 Checksum</label>
+              <input type="text" id="cfgChecksum" class="form-control" value="CFAD5848B2287D5BE537E88DB1FE04A1AF2B64D8AD1595DDF19C3059F6E75E9B" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Release Changelog Notes (Shown to users)</label>
+              <textarea id="cfgChangelog" class="form-control" rows="3">• Initial official release for Seven Coffee &amp; Tea&#10;• 116 beverages with full customization wizard&#10;• Live real-time order ledger &amp; GCash QR checkout</textarea>
+            </div>
+
+            <button type="submit" class="btn-admin-submit" style="width: auto; padding: 12px 30px;">
+              Save &amp; Update Release Details
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 3: LANDING PAGE CONTENT EDITOR
+           ==================================================================== -->
+      <div class="tab-pane" id="tabContent">
+        <div class="config-card">
+          <h3 class="config-section-title">Hero Section Copy</h3>
+
+          <form id="contentConfigForm">
+            <div class="form-group">
+              <label class="form-label">Main Headline Text</label>
+              <input type="text" id="cfgHeroHeadline" class="form-control" value="Craft Coffee, Ordered in Seconds." required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Hero Subtitle Copy</label>
+              <textarea id="cfgHeroSubtitle" class="form-control" rows="3" required>The definitive specialty coffee companion. Browse 116 curated artisanal recipes, custom-dial your milk and roast profile, and track your brew from extraction to counter in real time.</textarea>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Primary Download Button Label</label>
+              <input type="text" id="cfgCtaLabel" class="form-control" value="Download APK (v1.0.0)" required>
+            </div>
+
+            <h3 class="config-section-title" style="margin-top: 32px;">Featured Drinks on Phone Mockup</h3>
+
+            <div class="admin-grid-2col">
+              <div class="form-group">
+                <label class="form-label">Drink 1 Name &amp; Price</label>
+                <input type="text" id="cfgDrink1Name" class="form-control" value="Caramel Cloud Macchiato" required>
+                <input type="text" id="cfgDrink1Price" class="form-control" value="₱145" style="margin-top: 8px;" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Drink 2 Name &amp; Price</label>
+                <input type="text" id="cfgDrink2Name" class="form-control" value="Matcha Berry Cold Foam" required>
+                <input type="text" id="cfgDrink2Price" class="form-control" value="₱160" style="margin-top: 8px;" required>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-admin-submit" style="width: auto; padding: 12px 30px;">
+              Publish to Public Website
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 4: ANNOUNCEMENTS & NOTICE BANNER
+           ==================================================================== -->
+      <div class="tab-pane" id="tabBanner">
+        <div class="config-card">
+          <h3 class="config-section-title">Top Announcement Banner</h3>
+          <p style="font-size: 0.85rem; color: var(--ink-muted); margin-bottom: 20px;">Display an eye-catching banner at the very top of the website for all visitors.</p>
+
+          <form id="bannerConfigForm">
+            <div class="form-group" style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+              <label class="switch-toggle">
+                <input type="checkbox" id="cfgBannerActive" checked>
+                <span class="slider"></span>
+              </label>
+              <span style="font-weight: 600; color: var(--ink-white);">Enable Top Announcement Banner</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Banner Notice Text</label>
+              <input type="text" id="cfgBannerText" class="form-control" value="Official QuickBrew Android APK is now available for direct download." required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Banner Badge / Tag Text</label>
+              <input type="text" id="cfgBannerBadge" class="form-control" value="NEW RELEASE" required>
+            </div>
+
+            <button type="submit" class="btn-admin-submit" style="width: auto; padding: 12px 30px;">
+              Update Announcement Banner
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           TAB 5: SEO & LINKS CONFIG
+           ==================================================================== -->
+      <div class="tab-pane" id="tabSettings">
+        <div class="config-card">
+          <h3 class="config-section-title">SEO Meta &amp; Social Links</h3>
+
+          <form id="seoConfigForm">
+            <div class="form-group">
+              <label class="form-label">Browser Window Title</label>
+              <input type="text" id="cfgMetaTitle" class="form-control" value="QuickBrew — Official Android App Download" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">SEO Meta Description</label>
+              <textarea id="cfgMetaDesc" class="form-control" rows="2" required>Download the latest QuickBrew Android APK for Seven Coffee &amp; Tea. Fast craft coffee ordering, custom drinks, and live brew tracking.</textarea>
+            </div>
+
+            <div class="admin-grid-2col">
+              <div class="form-group">
+                <label class="form-label">Instagram Handle / URL</label>
+                <input type="text" class="form-control" value="@seven_coffee_tea">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Support Email</label>
+                <input type="email" class="form-control" value="support@quickbrew.app">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-admin-submit" style="width: auto; padding: 12px 30px;">
+              Save Settings
+            </button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="assets/admin.js"></script>
+</body>
+</html>

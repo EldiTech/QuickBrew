@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12+ replaces the window-background launch screen with its own
+      splash, which by default centres the launcher icon on it. That fought the
+      design twice: the icon's 4-unit stroke is tuned for a 48dp launcher and
+      renders as a heavy ~9dp line when blown up to the splash canvas, and a
+      large pre-filled cup hard-cutting to a small empty outline pre-empts the
+      one thing the splash is for — the mark drawing itself, then filling.
+
+      So the system splash is reduced to the bare field, and the handoff into
+      Flutter's first frame is invisible. The launcher icon is unaffected.
+    -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowSplashScreenBackground">@color/brew_field</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@color/brew_field</item>
+    </style>
+</resources>

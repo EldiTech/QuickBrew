@@ -1,0 +1,299 @@
+rules_version = '2';
+
+// The access model the app is written against. Deploy with:
+//
+//     firebase deploy --only firestore:rules
+//
+// Nothing here is inferred from the client — these rules are why the reads in
+// lib/brew_counter.dart are shaped the way they are, and in one case they are the
+// reason a query looks less clever than it could.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasProfile() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function myProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Read through `get(key, default)` rather than as `.role` / `.assignedStore`.
+    // A plain field access on a document that lacks the field raises an error,
+    // and an error in a condition fails the whole rule closed — so a super
+    // admin whose document was written by hand in the console without an
+    // `assignedStore` (the ordinary case: that field means nothing for the
+    // role) would be locked out of the very rules meant to admit them.
+    function myRole() {
+      return hasProfile() ? myProfile().get('role', '') : '';
+    }
+
+    function myStore() {
+      return hasProfile() ? myProfile().get('assignedStore', null) : null;
+    }
+
+    function isSuperAdmin() {
+      return myRole() == 'superadmin';
+    }
+
+    function isAdminFor(shop) {
+      return myRole() == 'admin' && myStore() == shop;
+    }
+
+    // Lower-cased once, in one place, so the same key is used to look an
+    // invite up here as the one the client wrote it under — see
+    // BrewAdmin._key in lib/brew_admin.dart.
+    //
+    // The null guard is not theoretical: `email` is absent from the token for
+    // an anonymous or phone sign-in, and calling `.lower()` on it there raises
+    // an error, which fails the whole rule closed. Returning '' instead means
+    // such an account simply matches no invite — which is the right answer —
+    // rather than breaking every rule that consults this.
+    function myEmailKey() {
+      return (signedIn() && request.auth.token.email != null)
+        ? request.auth.token.email.lower()
+        : '';
+    }
+
+    // Whether an unused invite addressed to `email` grants exactly the role
+    // and store the account being created is claiming. Guarded by `exists`
+    // first — `&&` short-circuits, so a missing invite never reaches the
+    // reads below.
+    //
+    // Every field is read through `get(key, default)` for the same reason
+    // myRole() is: an invite written by hand in the console is very often
+    // missing a field — no `used` on a fresh one, no `assignedStore` on a
+    // superadmin invite where it means nothing — and a plain accessor on an
+    // absent field raises an error, which fails this rule CLOSED. The account
+    // would then be refused its profile on every single launch, stay a
+    // customer forever, and the invite would never be marked used.
+    function inviteData(email) {
+      return get(/databases/$(database)/documents/invites/$(email)).data;
+    }
+
+    function matchesInvite(email) {
+      return exists(/databases/$(database)/documents/invites/$(email)) &&
+        inviteData(email).get('used', false) == false &&
+        request.resource.data.role == inviteData(email).get('role', '') &&
+        request.resource.data.assignedStore ==
+          inviteData(email).get('assignedStore', null);
+    }
+
+    function isPlainSignup() {
+      return request.resource.data.role == 'customer' &&
+        request.resource.data.assignedStore == null;
+    }
+
+    // Global system state (maintenance mode, lockouts, landing page CMS).
+    // Readable publicly so mobile clients and the download landing page know when ordering is paused.
+    // Writable by authenticated administrators and super administrators.
+    match /system/{doc} {
+      allow read: if true;
+      allow write: if isSuperAdmin() || myRole() == 'admin';
+    }
+
+    // Partner hours and logos. Any signed-in reader may see both shops. Writes
+    // used to be `false` outright — "written by the shop through something
+    // that is not this app" — but that something is now this app's own admin
+    // side: a super admin for either shop, or the one admin an invite has
+    // assigned to it.
+    match /shops/{shop} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin() || isAdminFor(shop);
+
+      // The board. Same bargain as the shop document it sits under.
+      match /menu/{item} {
+        allow read: if signedIn();
+        allow write: if isSuperAdmin() || isAdminFor(shop);
+      }
+
+      // What the shop will add to a drink — see BrewAddOn. Same bargain again,
+      // and for the same reason: this is the shop's own list, readable by anyone
+      // ordering from it and writable only by whoever runs it.
+      //
+      // Missing until now, which on a deployed build meant the wizard's customise
+      // step drew no add-ons section for either shop — BrewCounter.addOns logs
+      // and swallows a refused read, so an absent rule here is indistinguishable
+      // from a shop that sells no extras.
+      match /addons/{addOn} {
+        allow read: if signedIn();
+        allow write: if isSuperAdmin() || isAdminFor(shop);
+      }
+    }
+
+    // A reader's own orders, plus the shop's whole queue for whoever runs it.
+    //
+    // This rule is what forces BrewCounter.activeOrders to filter on `uid` in the
+    // query rather than reading the collection and picking through it in Dart:
+    // Firestore evaluates a list request against the query's constraints, not
+    // against the documents it would return, so an unfiltered `orders` query is
+    // rejected outright here — correctly, since it is a request for everybody's
+    // orders that merely intends to discard most of them. BrewAdmin.ordersFor
+    // filters on `shop` instead, which is exactly the field the admin branch
+    // below checks.
+    match /orders/{order} {
+      allow read: if signedIn() &&
+        (resource.data.uid == request.auth.uid ||
+         isSuperAdmin() || isAdminFor(resource.data.shop));
+
+      // The ordering flow this rule was waiting for now exists —
+      // BrewCounter.placeOrder, from the last step of the wizard — so the door it
+      // held shut is the one the reader's order has to go through. `write: false`
+      // was correct when nothing called it and is now the reason a confirmed
+      // order would come back "could not place that order" on a deployed build.
+      //
+      // Create only, and only ever filed under the caller's own uid: a reader may
+      // place their own order and may not write one in somebody else's name. The
+      // stage is pinned to `received` because that is where every order starts and
+      // advancing one is the counter's call, not the client's — see BrewOrderStage.
+      allow create: if signedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.stage == 'received';
+
+      // Once placed, an order is the shop's to move — the admin side this
+      // comment used to say was missing. Only the shop it belongs to (or a
+      // super admin) may touch it, only the `stage` field may change, and only
+      // to one of the five values BrewOrderStage actually has —
+      // BrewAdmin.advanceOrderStage is the one write that makes this call, and
+      // it never sends anything else. Nothing on the customer side edits or
+      // deletes one: cancelling is a conversation at the counter, and a reader
+      // who could delete an order already being made would leave a drink
+      // nobody is coming for.
+      //
+      // A reject is the same write with one more field: BrewAdmin.rejectOrder
+      // sends `stage: 'rejected'` alongside `rejectionReason`, which is why
+      // that key is allowed here too — but only alongside `stage`, never on
+      // its own, so a shop can annotate why it declined an order but cannot
+      // rewrite the reason on one it already moved past.
+      allow update: if (isSuperAdmin() || isAdminFor(resource.data.shop)) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['stage', 'rejectionReason']) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasAny(['stage']) &&
+        request.resource.data.stage in
+          ['received', 'preparing', 'ready', 'completed', 'rejected'];
+      allow delete: if false;
+    }
+
+    // An order a reader started and left, one document per account, keyed on
+    // their own uid — see BrewDraft in lib/brew_counter.dart.
+    //
+    // The uid in the path is what makes this rule as short as it is: there is no
+    // `uid` field to compare against, because the document id *is* the owner, so
+    // ownership cannot disagree with itself the way it could if the client sent
+    // it. It is also why the client never lists this collection — one reader has
+    // exactly one draft and reads it by name.
+    //
+    // Full write access, unlike `orders` below, and deliberately: a draft is the
+    // reader's own bookmark in their own flow. Nothing at the counter reads it,
+    // no shop is promised anything by it, and the worst a malformed one can do is
+    // fail BrewDraft.read and draw no card. There is nothing here worth
+    // validating field by field that the client is not free to change anyway by
+    // walking the wizard again.
+    match /drafts/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // One document per account: what this build knows about who is signed in,
+    // beyond the name and email Firebase Auth already holds. Every session
+    // self-heals this into existence on first read — see
+    // BrewAdmin.ensureProfile — which is why `create` has to independently
+    // verify the role being claimed rather than trusting the client that sends
+    // it.
+    match /users/{uid} {
+      // A reader may look themselves up; a super admin may look anyone up,
+      // which is what the users screen lists.
+      allow get: if signedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow list: if isSuperAdmin();
+
+      // Three ways a profile comes into being, and no fourth:
+      //
+      //  - an ordinary signup claiming nothing but `customer`;
+      //  - a signup that spends a pending invite addressed to this exact
+      //    signed-in email, for exactly the role and store that invite names;
+      //  - a super admin provisioning somebody else outright, which is what
+      //    BrewAdmin.createAdmin does after creating the Auth account. This is
+      //    the one branch where `uid` is not the caller's own, and it is
+      //    gated on the only role allowed to hand out roles.
+      allow create: if request.resource.data.uid == uid &&
+        (isSuperAdmin() ||
+         (signedIn() && request.auth.uid == uid &&
+          request.resource.data.email == request.auth.token.email &&
+          (isPlainSignup() || matchesInvite(myEmailKey()))));
+
+      // A super admin may change anything on anyone's record — promoting,
+      // demoting, reassigning a store, which is what the Edit control on the
+      // users screen writes. An account editing its own record may only ever be
+      // touching its name: role and store are the super admin's call, not
+      // something a client re-declares on every write.
+      //
+      // The one thing a super admin may not do is lower their *own* role. There
+      // is deliberately no in-app path to superadmin — the first one is made by
+      // hand in the console — so the last super admin to demote themselves would
+      // take the app's only way of granting the role with them, and the way back
+      // is a console visit by whoever owns the Firebase project. Everything else
+      // about their own record they may still write, which is why this is phrased
+      // as "the role stays superadmin" rather than as "not your own uid": a
+      // hand-made `{ role: "superadmin" }` document has no `email`, so the
+      // self-edit branch below would raise on `resource.data.email` and fail
+      // closed for it, and this branch is the only door that document has.
+      //
+      // `get('role', '')` rather than `.role`, for the reason myRole() gives: a
+      // write that omitted the field would raise rather than read as a demotion,
+      // and an error fails the whole rule closed.
+      allow update: if
+        (isSuperAdmin() &&
+         request.resource.data.uid == uid &&
+         (request.auth.uid != uid ||
+          request.resource.data.get('role', '') == 'superadmin')) ||
+        (signedIn() && request.auth.uid == uid &&
+         request.resource.data.uid == uid &&
+         request.resource.data.email == resource.data.email &&
+         request.resource.data.role == resource.data.role &&
+         request.resource.data.assignedStore == resource.data.assignedStore);
+
+      // Taking somebody off the roster — the super admin's call, and never
+      // their own row, for the same lockout reason the update rule guards
+      // against.
+      //
+      // Worth being clear about what this deletes, because the wording of a
+      // rule is where that gets assumed: `users/{uid}` is what an account may
+      // *configure*, not the account. The sign-in itself lives in Firebase
+      // Auth, which no client may delete out of, so the person can still log
+      // in — and BrewAdmin.ensureProfile will write them a plain customer
+      // document when they do, exactly as it does for a new signup. See
+      // BrewAdmin.deleteUser, and the sheet that calls it, which says so.
+      allow delete: if isSuperAdmin() && request.auth.uid != uid;
+    }
+
+    // A standing offer of a role, keyed by the invited email address (lower-
+    // cased) so the person it is for can look it up without a query the rules
+    // would otherwise have to open to everyone. Only a super admin writes one
+    // of these into existence — this is how "the super admin assigns the
+    // credentials" actually happens, since nothing on this client may create
+    // another person's Firebase Auth account directly.
+    match /invites/{email} {
+      allow get: if isSuperAdmin() || myEmailKey() == email;
+      allow list: if isSuperAdmin();
+      allow create, delete: if isSuperAdmin();
+
+      // The invited email may flip its own invite from unused to used, and
+      // touch nothing else on it — the one write BrewAdmin.ensureProfile makes
+      // itself, in the same batch that creates the matching users/{uid}.
+      // `get('used', false)` rather than `.used`, for the same reason as in
+      // matchesInvite: a hand-written invite with no `used` field would
+      // otherwise error here and fail closed — and since claiming an invite is
+      // one batch with the profile create, that failure would take the profile
+      // down with it.
+      allow update: if isSuperAdmin() ||
+        (myEmailKey() == email &&
+         resource.data.get('used', false) == false &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used']) &&
+         request.resource.data.used == true);
+    }
+  }
+}

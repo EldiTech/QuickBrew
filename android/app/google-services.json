@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1039563573692",
+    "project_id": "quick-brew-64673",
+    "storage_bucket": "quick-brew-64673.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1039563573692:android:9ce2daf4373be768dfc3b9",
+        "android_client_info": {
+          "package_name": "com.tip.quickbrew"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1039563573692-vt8qvu9dr9vhl2b75flqlv52cts4i7p6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlxmUqWTadFACJvQEkZmwGpxz__3pnjkk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1039563573692-vt8qvu9dr9vhl2b75flqlv52cts4i7p6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

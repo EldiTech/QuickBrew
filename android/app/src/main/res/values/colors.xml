@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors the field token in lib/theme/tokens.dart. The native window has
+         to be this colour too, or the app flashes white before the splash
+         fades in. -->
+    <color name="brew_field">#2A3D28</color>
+    <color name="ic_launcher_background">#2A3D28</color>
+</resources>
