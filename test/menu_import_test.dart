@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:quick_brew/brew_admin.dart';
@@ -92,6 +94,19 @@ void main() {
     expect(failure, isNotNull);
     final items = await BrewCounter(db).menu(BrewPartner.b).first;
     expect(items.map((item) => item.name), ['Still here']);
+  });
+
+  test('imports Drip & Co menu into coffee-shop-a collection', () async {
+    final csv = File(BrewMenuSeed.dripCoAsset).readAsStringSync();
+    final dripSeed = BrewMenuSeed.parse(csv);
+    final db = FakeFirebaseFirestore();
+    final failure = await BrewAdmin(db).importMenu(BrewPartner.a, dripSeed);
+    expect(failure, isNull);
+
+    final items = await BrewCounter(db).menu(BrewPartner.a).first;
+    expect(items.length, 40);
+    expect(items.first.name, 'Americano');
+    expect(items.last.name, 'Tiramisu Matcha');
   });
 
   group('the filters the board offers', () {

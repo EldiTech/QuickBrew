@@ -66,11 +66,56 @@ class BrewSeedAddOn {
 /// price would have to either overcharge for pearls or undercharge for boba,
 /// and both are the app lying about a number the reader can read off the wall.
 abstract final class BrewAddOnSeed {
-  /// Every add-on the shop's board lists, in board order — Coffee, Drizzle,
-  /// Syrup, Sinkers down the left, Toppings and Milk choice down the right.
-  /// File order becomes [BrewSeedAddOn.sort], the same bargain the menu
-  /// seed strikes.
-  static List<BrewSeedAddOn> get all {
+  /// Seven Coffee & Tea's add-ons board, for backwards compatibility.
+  static List<BrewSeedAddOn> get all => sevenCoffeeAndTea;
+
+  /// Add-ons board for the given [partner].
+  static List<BrewSeedAddOn> forPartner(BrewPartner partner) => switch (partner) {
+    BrewPartner.a => dripCo,
+    BrewPartner.b => sevenCoffeeAndTea,
+  };
+
+  /// Drip & Co's add-ons board, transcribed from drip_co_menu.xlsx.
+  static List<BrewSeedAddOn> get dripCo {
+    const rows = <(String, int, String)>[
+      // COFFEE
+      ('Extra Shot', 2000, 'Coffee'),
+
+      // DRIZZLE
+      ('Syrups / Drizzle', 1500, 'Drizzle'),
+
+      // SINKERS
+      ('Bobba Pearl', 1000, 'Sinkers'),
+      ('Nata', 1000, 'Sinkers'),
+      ('Oreo', 1500, 'Sinkers'),
+      ('Coffee Jelly', 1500, 'Sinkers'),
+      ('Milo', 1500, 'Sinkers'),
+
+      // TOPPINGS
+      ('Cream Cheese', 1500, 'Toppings'),
+      ('Salty Cream', 1500, 'Toppings'),
+      ('Whip Cream', 1500, 'Toppings'),
+      ('Sea Salt', 1500, 'Toppings'),
+
+      // MILK CHOICE
+      ('Oatside', 3000, 'Milk choice'),
+    ];
+
+    return [
+      for (final (index, (name, priceCents, group)) in rows.indexed)
+        BrewSeedAddOn(
+          name: name,
+          priceCents: priceCents,
+          group: group,
+          sort: index.toDouble(),
+        ),
+    ];
+  }
+
+  /// Every add-on Seven Coffee & Tea's board lists, in board order — Coffee,
+  /// Drizzle, Syrup, Sinkers down the left, Toppings and Milk choice down the
+  /// right. File order becomes [BrewSeedAddOn.sort].
+  static List<BrewSeedAddOn> get sevenCoffeeAndTea {
     const rows = <(String, int, String)>[
       // COFFEE — ₱10
       ('Espresso shot', 1000, 'Coffee'),
@@ -115,20 +160,24 @@ abstract final class BrewAddOnSeed {
   }
 }
 
-/// The Seven Coffee & Tea board, read out of the CSV bundled at
-/// `assets/menu/seven_coffee_and_tea.csv`.
+/// The partner boards, read out of bundled CSV price lists.
 ///
-/// The file is the transcription of two physical menu boards, so it is the
-/// authority on what the shop sells and in what order — an import that
-/// re-sorted it alphabetically would scatter the Frappe Series through the
-/// Milkteas and produce a board no customer standing in that shop would
-/// recognise. File order becomes [BrewSeedItem.sort].
+/// Seven Coffee & Tea: `assets/menu/seven_coffee_and_tea.csv`
+/// Drip & Co: `assets/menu/drip_co.csv`
 abstract final class BrewMenuSeed {
   static const asset = 'assets/menu/seven_coffee_and_tea.csv';
+  static const sevenCoffeeAsset = 'assets/menu/seven_coffee_and_tea.csv';
+  static const dripCoAsset = 'assets/menu/drip_co.csv';
 
-  /// Every priced row in the bundled list, in board order.
-  static Future<List<BrewSeedItem>> load() async {
-    return parse(await rootBundle.loadString(asset));
+  static String assetFor(BrewPartner partner) => switch (partner) {
+    BrewPartner.a => dripCoAsset,
+    BrewPartner.b => sevenCoffeeAsset,
+  };
+
+  /// Every priced row in the bundled list for [partner], in board order.
+  /// Defaults to [BrewPartner.b] for backwards compatibility.
+  static Future<List<BrewSeedItem>> load([BrewPartner partner = BrewPartner.b]) async {
+    return parse(await rootBundle.loadString(assetFor(partner)));
   }
 
   /// The parse, split out from the load so it can be exercised without a

@@ -131,7 +131,7 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
 
     final List<BrewSeedItem> seed;
     try {
-      seed = await BrewMenuSeed.load();
+      seed = await BrewMenuSeed.load(widget.partner);
     } catch (error) {
       debugPrint('QuickBrew → could not read the bundled menu: $error');
       if (!mounted) return;
@@ -474,14 +474,14 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
       children: [
         Expanded(
           child: Text(
-            'Replace this board with the Seven Coffee & Tea list.',
+            'Replace this board with the ${widget.partner.name} list.',
             style: BrewType.rowBody,
           ),
         ),
         const SizedBox(width: BrewSpace.grid),
         BrewMonoButton(
           label: _importing ? 'Importing' : 'Import',
-          semanticsLabel: 'Import the Seven Coffee and Tea menu',
+          semanticsLabel: 'Import the ${widget.partner.name} menu',
           onPressed:
               (_importing || widget.admin == null) ? null : _importSeed,
         ),
