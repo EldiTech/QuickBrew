@@ -573,46 +573,47 @@ class _HomePanel extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
               decoration: BoxDecoration(
-                color: BrewColor.cream.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(4),
+                color: const Color(0x380F2A1C),
+                borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                  color: BrewColor.cream.withValues(alpha: 0.14),
+                  color: BrewColor.sageLight.withValues(alpha: 0.28),
+                  width: 0.9,
                 ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(
-                    Icons.coffee_rounded,
-                    size: 12,
+                    Icons.eco_rounded,
+                    size: 13,
                     color: BrewColor.sageLight,
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 6),
                   Text(
                     'QUICKBREW NETWORK',
                     style: BrewType.mono.copyWith(
                       fontSize: 9.5,
-                      letterSpacing: 1.4,
+                      letterSpacing: 1.2,
                       color: BrewColor.sageLight,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    width: 5,
-                    height: 5,
+                    width: 4,
+                    height: 4,
                     decoration: const BoxDecoration(
                       color: BrewColor.sageLight,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 8),
                   Text(
                     'DUAL PASS',
                     style: BrewType.mono.copyWith(
-                      fontSize: 8.5,
+                      fontSize: 9,
                       letterSpacing: 1.0,
-                      color: BrewColor.cream.withValues(alpha: 0.8),
+                      color: BrewColor.cream.withValues(alpha: 0.85),
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -689,7 +690,7 @@ class _HomePanel extends StatelessWidget {
             icon: Icons.storefront_rounded,
           ),
         ),
-        const SizedBox(height: BrewSpace.grid * 1.5),
+        const SizedBox(height: 12.7),
         // Both shops, always, in a fixed order, laid out identically. See
         // BrewCounter.shops: which two there are and where they sit is not
         // something the network gets a vote on.
@@ -740,6 +741,17 @@ class _Masthead extends StatelessWidget {
             dimension: BrewMotion.cupLandingSize,
             progress: 1,
             strokeWidth: BrewMotion.cupLandingStroke,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'QuickBrew',
+              style: BrewType.wordmark(20, color: BrewColor.cream),
+            ),
           ),
         ),
         const Spacer(),
@@ -1109,7 +1121,7 @@ class _ShopCardState extends State<_ShopCard> {
                               ),
                               const SizedBox(height: 4),
                               SizedBox(
-                                height: BrewType.rowBodyTwoLineHeight,
+                                height: BrewType.rowBodyTwoLineHeight + 0.05,
                                 child: Text(
                                   shop.displayDescription,
                                   style: BrewType.rowBody.copyWith(
@@ -1835,9 +1847,23 @@ class _BrewNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: BrewColor.hairline)),
+        color: const Color(0xF5081710),
+        border: Border(
+          top: BorderSide(
+            color: BrewColor.cream.withValues(alpha: 0.1),
+            width: 1.0,
+          ),
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x66000000),
+            blurRadius: 18,
+            offset: Offset(0, -4),
+          ),
+        ],
       ),
       padding: EdgeInsets.only(
+        top: 2,
         bottom: math.max(bottomInset, BrewSpace.grid),
       ),
       child: Row(
@@ -1877,18 +1903,26 @@ class _NavItem extends StatefulWidget {
 class _NavItemState extends State<_NavItem> {
   bool _pressed = false;
 
+  IconData _iconFor(BrewTab tab, bool selected) => switch (tab) {
+    BrewTab.home => selected ? Icons.home_rounded : Icons.home_outlined,
+    BrewTab.orders =>
+      selected ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
+    BrewTab.profile =>
+      selected ? Icons.person_rounded : Icons.person_outline_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
     final reduced = MediaQuery.disableAnimationsOf(context);
-    final ink = widget.selected || _pressed
+    final isHighlighted = widget.selected || _pressed;
+    final ink = isHighlighted
         ? BrewColor.cream
-        : BrewColor.sageLight;
+        : BrewColor.sageLight.withValues(alpha: 0.45);
 
     return BrewPressable(
       onPressed: widget.onPressed,
       onPressedChanged: (value) => setState(() => _pressed = value),
       radius: BrewSpace.radius,
-      // No 1px drop on a tab: the whole bar would appear to flex under a thumb.
       pressed: false,
       reduced: reduced,
       semanticsLabel: widget.selected
@@ -1898,40 +1932,45 @@ class _NavItemState extends State<_NavItem> {
         child: SizedBox(
           height: widget.height,
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // The indicator sits on the bar's own top rule, so the selected tab
-              // reads as the segment of it that has been inked in.
-              //
-              // Inked on the same 90ms ramp as the label above it, because the
-              // two are one control saying one thing. The rule used to appear
-              // between frames while the label eased — so a tab change read as a
-              // hard cut with a fade attached to it, which is the tell of two
-              // states drawn by two different hands. It fades in place rather
-              // than sliding across the bar: the order card's own progress
-              // mark (`StageTrack` in widgets/order_track.dart) deliberately
-              // does not slide either, and for the same reason — the reader
-              // jumped to this tab, they did not travel to it.
+              // Top active indicator line
               AnimatedContainer(
                 duration: reduced ? Duration.zero : BrewMotion.press,
                 curve: BrewMotion.pressCurve,
-                height: 2,
-                // Transparent rather than null: a null colour is nothing to
-                // tween from, and the segment would snap back on deselection
-                // however long the ramp says.
-                color: widget.selected
-                    ? BrewColor.cream
-                    : const Color(0x00000000),
-              ),
-              Expanded(
-                child: Center(
-                  child: AnimatedDefaultTextStyle(
-                    duration: reduced ? Duration.zero : BrewMotion.press,
-                    curve: BrewMotion.pressCurve,
-                    style: BrewType.mono.copyWith(color: ink),
-                    child: Text(widget.tab.label.toUpperCase()),
-                  ),
+                height: 2.5,
+                width: widget.selected ? 24 : 0,
+                decoration: BoxDecoration(
+                  color: widget.selected
+                      ? BrewColor.sageLight
+                      : const Color(0x00000000),
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
+              const Spacer(),
+              AnimatedScale(
+                duration: reduced ? Duration.zero : BrewMotion.press,
+                curve: BrewMotion.pressCurve,
+                scale: widget.selected ? 1.08 : 1.0,
+                child: Icon(
+                  _iconFor(widget.tab, widget.selected),
+                  size: 23,
+                  color: ink,
+                ),
+              ),
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: reduced ? Duration.zero : BrewMotion.press,
+                curve: BrewMotion.pressCurve,
+                style: BrewType.mono.copyWith(
+                  fontSize: 10,
+                  fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
+                  letterSpacing: 0.9,
+                  color: ink,
+                ),
+                child: Text(widget.tab.label.toUpperCase()),
+              ),
+              const Spacer(),
             ],
           ),
         ),

@@ -136,17 +136,17 @@ class OrderWizardScreen extends StatefulWidget {
       reverseTransitionDuration: duration,
       pageBuilder: (context, animation, secondaryAnimation) =>
           OrderWizardScreen(
-        shop: shop,
-        item: item,
-        session: session,
-        counter: counter,
-        draft: draft,
-      ),
+            shop: shop,
+            item: item,
+            session: session,
+            counter: counter,
+            draft: draft,
+          ),
       transitionsBuilder: (context, animation, secondaryAnimation, child) =>
           FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
-      ),
+            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            child: child,
+          ),
     );
   }
 
@@ -313,12 +313,12 @@ class _CartLine {
   /// the priced result. See [BrewDraftLine] for why the price travels only as
   /// something to compare against.
   BrewDraftLine get draftLine => BrewDraftLine(
-        itemId: item.id,
-        size: size,
-        extraIds: [for (final extra in extras) extra.id],
-        quantity: quantity,
-        unitCents: unitCents,
-      );
+    itemId: item.id,
+    size: size,
+    extraIds: [for (final extra in extras) extra.id],
+    quantity: quantity,
+    unitCents: unitCents,
+  );
 
   /// The qualifiers alone, for the cart row that already prints the name above
   /// them. Empty string when there is nothing to qualify.
@@ -500,9 +500,9 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// screen is showing them today. Orders *already placed* keep their stored
   /// label untouched — see [_paymentLabel].
   String get _payment => switch (_shopQr) {
-        null => 'Pay at counter',
-        _ => _paymentLabel,
-      };
+    null => 'Pay at counter',
+    _ => _paymentLabel,
+  };
 
   /// The picture of the transfer the reader uploaded, or null until they have.
   ///
@@ -590,8 +590,10 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// not signed in reaches the sign-in message [_placeOrder] already gives
   /// rather than this one, and a reader whose count has not arrived yet is
   /// not blocked by a number this screen has not actually seen.
-  bool get _canPlaceOrder =>
-      switch (_activeOrderCount) { final count? => count < _maxActiveOrders, null => true };
+  bool get _canPlaceOrder => switch (_activeOrderCount) {
+    final count? => count < _maxActiveOrders,
+    null => true,
+  };
 
   /// How many of one drink the stepper on step two allows right now.
   ///
@@ -614,8 +616,10 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// Both floored at zero rather than letting the subtraction go negative: a
   /// reader at or past either cap has nothing left to give the stepper.
   int get _quantityCap {
-    final activeOrderRoom =
-        switch (_activeOrderCount) { final count? => _maxActiveOrders - count, null => _maxActiveOrders };
+    final activeOrderRoom = switch (_activeOrderCount) {
+      final count? => _maxActiveOrders - count,
+      null => _maxActiveOrders,
+    };
     final cartRoom = _maxActiveOrders - _bankedQuantity;
     return math.min(activeOrderRoom, cartRoom).clamp(0, _maxActiveOrders);
   }
@@ -689,8 +693,9 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
     final counter = widget.counter;
     final session = widget.session;
     if (counter != null && session != null) {
-      _activeOrdersSubscription =
-          counter.activeOrders(session.uid).listen((orders) {
+      _activeOrdersSubscription = counter.activeOrders(session.uid).listen((
+        orders,
+      ) {
         if (!mounted) return;
         setState(() {
           _activeOrderCount = orders.length;
@@ -738,10 +743,11 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
         _scheduleInitialised = true;
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
-        _scheduleDays = DateTime(at.year, at.month, at.day)
-            .difference(today)
-            .inDays
-            .clamp(0, _maxScheduleDays);
+        _scheduleDays = DateTime(
+          at.year,
+          at.month,
+          at.day,
+        ).difference(today).inDays.clamp(0, _maxScheduleDays);
         _scheduleMinutes = at.hour * 60 + at.minute;
       }
       // A draft resumed past the pickup step has already been through its
@@ -798,8 +804,10 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// [BrewAddOn.byBoardOrder], and filtering preserves that. An id whose
   /// add-on has been deleted since it was chosen falls out here, which is what
   /// keeps a removed extra from being priced or printed on the receipt.
-  List<BrewAddOn> get _draftExtras =>
-      [for (final addOn in _addOns) if (_extraIds.contains(addOn.id)) addOn];
+  List<BrewAddOn> get _draftExtras => [
+    for (final addOn in _addOns)
+      if (_extraIds.contains(addOn.id)) addOn,
+  ];
 
   /// What one of the current draft costs, extras included.
   ///
@@ -823,8 +831,10 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// as far as every one of those is concerned the instant they press it; it
   /// stays in [_cart] only long enough to collapse, and a total that waited for
   /// the animation would be a figure that disagreed with the reader for 180ms.
-  List<_CartLine> get _liveCart =>
-      [for (final line in _cart) if (!_leaving.contains(line)) line];
+  List<_CartLine> get _liveCart => [
+    for (final line in _cart)
+      if (!_leaving.contains(line)) line,
+  ];
 
   int get _cartTotalCents =>
       _liveCart.fold(0, (sum, line) => sum + line.totalCents);
@@ -859,8 +869,11 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   DateTime? get _scheduledFor {
     if (!_scheduling) return null;
     final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day)
-        .add(Duration(days: _scheduleDays, minutes: _scheduleMinutes));
+    return DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(Duration(days: _scheduleDays, minutes: _scheduleMinutes));
   }
 
   /// Why the dialled-in time cannot be ordered for, or null when it can.
@@ -899,8 +912,18 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
     if (daysFromToday == 1) return 'Tomorrow';
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${weekdays[day.weekday - 1]} ${day.day} ${months[day.month - 1]}';
   }
@@ -908,7 +931,10 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// "9:15 AM", from minutes since midnight.
   static String _timeLabel(int minutes) {
     final hour24 = minutes ~/ 60;
-    final hour12 = switch (hour24 % 12) { 0 => 12, final h => h };
+    final hour12 = switch (hour24 % 12) {
+      0 => 12,
+      final h => h,
+    };
     final minute = (minutes % 60).toString().padLeft(2, '0');
     return '$hour12:$minute ${hour24 < 12 ? 'AM' : 'PM'}';
   }
@@ -920,29 +946,29 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// walked back out of, and a forward button that is live because of a
   /// condition two steps ago is the classic wizard bug.
   bool get _canAdvance => switch (_step) {
-        // A sized item needs one picked; a flat one has nothing to pick.
-        _Step.select => _draftItem.sizeLines.isEmpty || _size != null,
-        _Step.customise => true,
-        _Step.cart => _liveCart.isNotEmpty,
-        _Step.pickup =>
-          _nameError == null && _phoneError == null && _scheduleError == null,
-        // The receipt is the whole step. Nothing was paid in the app, so the
-        // uploaded picture is the only evidence the counter will ever have that
-        // this order was settled, and a Review button that opened without one
-        // would walk the reader to a Confirm that promises the shop a payment
-        // nobody can find.
-        //
-        // A shop with no QR on file is the exception, and has to be: there is
-        // nothing to pay against, so demanding proof of paying it would be a
-        // door with no key. Those orders go through as pay-at-counter — see
-        // [_shopQr] and the sentence [_paymentBody] prints in its place.
-        _Step.payment => _receipt != null || _shopQr == null,
-        // Left true at the order cap rather than folding in [_canPlaceOrder]:
-        // a dead button here would have nothing to answer a press with, and
-        // [_placeOrder] is what shows [_OrderCapSheet] instead of writing —
-        // the same shape [_addDraftToCart] uses for the cart's own cap.
-        _Step.confirm => !_placing && !_placed,
-      };
+    // A sized item needs one picked; a flat one has nothing to pick.
+    _Step.select => _draftItem.sizeLines.isEmpty || _size != null,
+    _Step.customise => true,
+    _Step.cart => _liveCart.isNotEmpty,
+    _Step.pickup =>
+      _nameError == null && _phoneError == null && _scheduleError == null,
+    // The receipt is the whole step. Nothing was paid in the app, so the
+    // uploaded picture is the only evidence the counter will ever have that
+    // this order was settled, and a Review button that opened without one
+    // would walk the reader to a Confirm that promises the shop a payment
+    // nobody can find.
+    //
+    // A shop with no QR on file is the exception, and has to be: there is
+    // nothing to pay against, so demanding proof of paying it would be a
+    // door with no key. Those orders go through as pay-at-counter — see
+    // [_shopQr] and the sentence [_paymentBody] prints in its place.
+    _Step.payment => _receipt != null || _shopQr == null,
+    // Left true at the order cap rather than folding in [_canPlaceOrder]:
+    // a dead button here would have nothing to answer a press with, and
+    // [_placeOrder] is what shows [_OrderCapSheet] instead of writing —
+    // the same shape [_addDraftToCart] uses for the cart's own cap.
+    _Step.confirm => !_placing && !_placed,
+  };
 
   String? get _nameError {
     final value = _nameController.text.trim();
@@ -1239,7 +1265,8 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
     final session = widget.session;
     if (counter == null || session == null) {
       setState(
-        () => _saveFailure = 'You are not connected, so this order cannot be '
+        () => _saveFailure =
+            'You are not connected, so this order cannot be '
             'saved. Sign in and try again.',
       );
       return;
@@ -1319,7 +1346,7 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
       notice = saved
           ? 'Saved to your photos.'
           : 'Could not save it. Allow QuickBrew to save photos, or take a '
-              'screenshot instead.';
+                'screenshot instead.';
     } catch (error) {
       debugPrint('QuickBrew → QR download failed: $error');
       notice = 'Could not save it. Take a screenshot of the code instead.';
@@ -1411,7 +1438,8 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
     final session = widget.session;
     if (counter == null || session == null) {
       setState(
-        () => _failure = 'You are not connected, so this order cannot be sent. '
+        () => _failure =
+            'You are not connected, so this order cannot be sent. '
             'Sign in and try again.',
       );
       return;
@@ -1488,83 +1516,84 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
         child: BrewBackground(
           child: StreamBuilder<List<BrewAddOn>>(
             stream: _addOnStream,
-          builder: (context, addOnSnapshot) {
-            _addOns = addOnSnapshot.data ?? const <BrewAddOn>[];
+            builder: (context, addOnSnapshot) {
+              _addOns = addOnSnapshot.data ?? const <BrewAddOn>[];
 
-            // A fresh order that has not asked for the board has no menu stream
-            // and no lines to rebuild, so it goes straight through — the board
-            // it came from is already in [widget.item].
-            if (_menuStream == null) {
-              return _scaffold(
-                context,
-                media,
-                compact: compact,
-                reduced: reduced,
-              );
-            }
-
-            return StreamBuilder<List<BrewMenuItem>>(
-              stream: _menuStream,
-              builder: (context, menuSnapshot) {
-                final menu = menuSnapshot.data;
-                // Assigned on the way past, like [_addOns] above and for the
-                // same reason: this rebuild is the snapshot arriving, and a
-                // setState here would schedule a second one for a result this
-                // frame already has. Step one's picker reads it.
-                _menu = menu ?? const <BrewMenuItem>[];
-
-                final draft = widget.draft;
-                // A stream opened by Add another drink has no draft behind it
-                // and nothing to rebuild — the board is only being watched so
-                // the reader can pick from it.
-                if (draft == null) {
-                  return _scaffold(
-                    context,
-                    media,
-                    compact: compact,
-                    reduced: reduced,
-                  );
-                }
-                // The menu is always waited for; the add-ons only when the draft
-                // names one.
-                //
-                // Both would stall a draft from a shop that sells no extras: an
-                // empty `addons` collection may have no snapshot to deliver at
-                // all, so the cart would sit on "Fetching your saved order"
-                // forever. The menu alone would be wrong the other way — a draft
-                // whose add-ons had not landed yet would rebuild without them,
-                // dropping surcharges the reader chose and then reporting the
-                // shortfall as the shop having repriced.
-                //
-                // Which stream a given draft needs is a fact about that draft, so
-                // that is what the gate reads.
-                final needsAddOns =
-                    draft.lines.any((line) => line.extraIds.isNotEmpty);
-                // Rebuilt after this frame rather than during it: [_restore]
-                // calls setState, which inside a builder would schedule a second
-                // build for a result this one could have had. The same reason
-                // [_addOns] above is assigned on the way past.
-                if (_restoring &&
-                    menu != null &&
-                    (!needsAddOns || addOnSnapshot.hasData)) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted && _restoring) _restore(menu, _addOns);
-                  });
-                }
+              // A fresh order that has not asked for the board has no menu stream
+              // and no lines to rebuild, so it goes straight through — the board
+              // it came from is already in [widget.item].
+              if (_menuStream == null) {
                 return _scaffold(
                   context,
                   media,
                   compact: compact,
                   reduced: reduced,
                 );
-              },
-            );
-          },
+              }
+
+              return StreamBuilder<List<BrewMenuItem>>(
+                stream: _menuStream,
+                builder: (context, menuSnapshot) {
+                  final menu = menuSnapshot.data;
+                  // Assigned on the way past, like [_addOns] above and for the
+                  // same reason: this rebuild is the snapshot arriving, and a
+                  // setState here would schedule a second one for a result this
+                  // frame already has. Step one's picker reads it.
+                  _menu = menu ?? const <BrewMenuItem>[];
+
+                  final draft = widget.draft;
+                  // A stream opened by Add another drink has no draft behind it
+                  // and nothing to rebuild — the board is only being watched so
+                  // the reader can pick from it.
+                  if (draft == null) {
+                    return _scaffold(
+                      context,
+                      media,
+                      compact: compact,
+                      reduced: reduced,
+                    );
+                  }
+                  // The menu is always waited for; the add-ons only when the draft
+                  // names one.
+                  //
+                  // Both would stall a draft from a shop that sells no extras: an
+                  // empty `addons` collection may have no snapshot to deliver at
+                  // all, so the cart would sit on "Fetching your saved order"
+                  // forever. The menu alone would be wrong the other way — a draft
+                  // whose add-ons had not landed yet would rebuild without them,
+                  // dropping surcharges the reader chose and then reporting the
+                  // shortfall as the shop having repriced.
+                  //
+                  // Which stream a given draft needs is a fact about that draft, so
+                  // that is what the gate reads.
+                  final needsAddOns = draft.lines.any(
+                    (line) => line.extraIds.isNotEmpty,
+                  );
+                  // Rebuilt after this frame rather than during it: [_restore]
+                  // calls setState, which inside a builder would schedule a second
+                  // build for a result this one could have had. The same reason
+                  // [_addOns] above is assigned on the way past.
+                  if (_restoring &&
+                      menu != null &&
+                      (!needsAddOns || addOnSnapshot.hasData)) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted && _restoring) _restore(menu, _addOns);
+                    });
+                  }
+                  return _scaffold(
+                    context,
+                    media,
+                    compact: compact,
+                    reduced: reduced,
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _scaffold(
     BuildContext context,
@@ -1579,7 +1608,8 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
             padding: EdgeInsets.only(
               left: BrewSpace.gutter,
               right: BrewSpace.gutter,
-              top: math.max(media.padding.top, BrewSpace.minInset) +
+              top:
+                  math.max(media.padding.top, BrewSpace.minInset) +
                   BrewSpace.headerClearance,
               bottom: BrewSpace.grid * 3,
             ),
@@ -1607,9 +1637,7 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
                     alignment: AlignmentDirectional.topStart,
                     children: [
                       for (final child in previous)
-                        ExcludeSemantics(
-                          child: IgnorePointer(child: child),
-                        ),
+                        ExcludeSemantics(child: IgnorePointer(child: child)),
                       ?current,
                     ],
                   ),
@@ -1648,51 +1676,51 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// cart) are read here from the same state the body reads a frame later, so
   /// the two cannot disagree.
   int get _bodyLength => switch (_placed) {
-        true => 2 + _cart.length,
-        false => switch (_step) {
-            // The headline, a heading and a row per size — plus, while Add
-            // another drink is open, a heading and a row per pickable item
-            // ahead of all that.
-            _Step.select =>
-              2 + _draftItem.sizeLines.length + (_picking ? 1 + _pickable.length : 0),
-            // The add-ons blurb and one row per section, then the stepper and
-            // the total.
-            _Step.customise => 4 + _extraSections(_addOns).length,
-            // A row per line, then the total and Add another — plus the resume
-            // notice above them when a saved order came back changed. The empty
-            // cart is the one sentence, which the max keeps from being a
-            // zero-length timeline.
-            _Step.cart => math.max(
-                1,
-                _cart.length + 2 + (_resumeNotice == null ? 0 : 1),
-              ),
-            // The blurb, three fields, and the pickup-time section.
-            _Step.pickup => 5,
-            // The QR block and the receipt block, or the two lines that stand in
-            // for them when the shop has no code on file.
-            _Step.payment => 2,
-            // The summary is one block; the failure line reveals itself.
-            _Step.confirm => 1,
-          },
-      };
+    true => 2 + _cart.length,
+    false => switch (_step) {
+      // The headline, a heading and a row per size — plus, while Add
+      // another drink is open, a heading and a row per pickable item
+      // ahead of all that.
+      _Step.select =>
+        2 + _draftItem.sizeLines.length + (_picking ? 1 + _pickable.length : 0),
+      // The add-ons blurb and one row per section, then the stepper and
+      // the total.
+      _Step.customise => 4 + _extraSections(_addOns).length,
+      // A row per line, then the total and Add another — plus the resume
+      // notice above them when a saved order came back changed. The empty
+      // cart is the one sentence, which the max keeps from being a
+      // zero-length timeline.
+      _Step.cart => math.max(
+        1,
+        _cart.length + 2 + (_resumeNotice == null ? 0 : 1),
+      ),
+      // The blurb, three fields, and the pickup-time section.
+      _Step.pickup => 5,
+      // The QR block and the receipt block, or the two lines that stand in
+      // for them when the shop has no code on file.
+      _Step.payment => 2,
+      // The summary is one block; the failure line reveals itself.
+      _Step.confirm => 1,
+    },
+  };
 
   Widget _body(bool compact) => switch (_placed) {
-        true => _DoneBody(
-            shop: widget.shop,
-            lines: _liveCart,
-            totalCents: _cartTotalCents,
-            pickupName: _nameController.text.trim(),
-            scheduledFor: _scheduledFor,
-          ),
-        false => switch (_step) {
-            _Step.select => _selectBody(),
-            _Step.customise => _customiseBody(),
-            _Step.cart => _cartBody(),
-            _Step.pickup => _pickupBody(),
-            _Step.payment => _paymentBody(),
-            _Step.confirm => _confirmBody(),
-          },
-      };
+    true => _DoneBody(
+      shop: widget.shop,
+      lines: _liveCart,
+      totalCents: _cartTotalCents,
+      pickupName: _nameController.text.trim(),
+      scheduledFor: _scheduledFor,
+    ),
+    false => switch (_step) {
+      _Step.select => _selectBody(),
+      _Step.customise => _customiseBody(),
+      _Step.cart => _cartBody(),
+      _Step.pickup => _pickupBody(),
+      _Step.payment => _paymentBody(),
+      _Step.confirm => _confirmBody(),
+    },
+  };
 
   // ---------------------------------------------------------------- step one
 
@@ -2064,7 +2092,7 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
           label: 'Schedule pickup',
           note: _scheduling
               ? '${_dayLabel(scheduleDay, _scheduleDays)}, '
-                  '${_timeLabel(_scheduleMinutes)}'
+                    '${_timeLabel(_scheduleMinutes)}'
               : 'Book a day and time up to a week out.',
           selected: _scheduling,
           onSelected: _startScheduling,
@@ -2117,8 +2145,8 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
                           semanticsLabel: 'Fifteen minutes earlier',
                           onPressed: _scheduleMinutes >= _scheduleStep
                               ? () => setState(
-                                    () => _scheduleMinutes -= _scheduleStep,
-                                  )
+                                  () => _scheduleMinutes -= _scheduleStep,
+                                )
                               : null,
                         ),
                         SizedBox(
@@ -2133,13 +2161,11 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
                         _StepperButton(
                           label: '+',
                           semanticsLabel: 'Fifteen minutes later',
-                          onPressed:
-                              _scheduleMinutes < 24 * 60 - _scheduleStep
-                                  ? () => setState(
-                                        () =>
-                                            _scheduleMinutes += _scheduleStep,
-                                      )
-                                  : null,
+                          onPressed: _scheduleMinutes < 24 * 60 - _scheduleStep
+                              ? () => setState(
+                                  () => _scheduleMinutes += _scheduleStep,
+                                )
+                              : null,
                         ),
                       ],
                     ),
@@ -2256,10 +2282,8 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
                     // the frame, not the step — and [_canAdvance] still lets the
                     // reader past, since a code they cannot see is a code they
                     // cannot pay.
-                    errorBuilder: (context, error, stack) => const SizedBox(
-                      width: _qrHeight,
-                      height: _qrHeight,
-                    ),
+                    errorBuilder: (context, error, stack) =>
+                        const SizedBox(width: _qrHeight, height: _qrHeight),
                   ),
                 ),
               ),
@@ -2348,9 +2372,9 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
                       onPressed: _pickingReceipt
                           ? null
                           : () => setState(() {
-                                _receipt = null;
-                                _receiptError = null;
-                              }),
+                              _receipt = null;
+                              _receiptError = null;
+                            }),
                     ),
                 ],
               ),
@@ -2378,21 +2402,21 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
   /// a Review button blocked on a picture of a payment that could not be made
   /// would be a dead end with no way out but Cancel.
   List<Widget> _noQrSection() => [
-        StaggerItem(
-          index: 0,
-          child: Text('PAY AT THE COUNTER', style: BrewType.mono),
-        ),
-        const SizedBox(height: BrewSpace.grid * 1.5),
-        StaggerItem(
-          index: 1,
-          child: Text(
-            '${_shop.displayName} has not put up a payment code yet, so there '
-            'is nothing to scan. Settle up at the counter when you collect — '
-            'cash or card, whichever they take.',
-            style: BrewType.rowBody,
-          ),
-        ),
-      ];
+    StaggerItem(
+      index: 0,
+      child: Text('PAY AT THE COUNTER', style: BrewType.mono),
+    ),
+    const SizedBox(height: BrewSpace.grid * 1.5),
+    StaggerItem(
+      index: 1,
+      child: Text(
+        '${_shop.displayName} has not put up a payment code yet, so there '
+        'is nothing to scan. Settle up at the counter when you collect — '
+        'cash or card, whichever they take.',
+        style: BrewType.rowBody,
+      ),
+    ),
+  ];
 
   // ---------------------------------------------------------------- step six
 
@@ -2445,8 +2469,9 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
         const Spacer(),
         BrewMonoButton(
           label: _placed ? 'Done' : 'Cancel',
-          semanticsLabel:
-              _placed ? 'Back to the menu' : 'Cancel this order and go back',
+          semanticsLabel: _placed
+              ? 'Back to the menu'
+              : 'Cancel this order and go back',
           onPressed: () => Navigator.of(context).maybePop(),
         ),
       ],
@@ -2507,11 +2532,9 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
           // step that is not finished. See [_advance].
           onPressed: (_placing || _saving)
               ? null
-              : (_canAdvance ||
-                      _step == _Step.pickup ||
-                      _step == _Step.payment)
-                  ? _advance
-                  : null,
+              : (_canAdvance || _step == _Step.pickup || _step == _Step.payment)
+              ? _advance
+              : null,
         ),
         const SizedBox(height: BrewSpace.grid),
         BrewTextButton(
@@ -2628,7 +2651,8 @@ class _Footer extends StatelessWidget {
         // The keyboard's inset is added to the safe area rather than replacing
         // it, so the action bar rides above an open keyboard instead of sitting
         // underneath it while the reader types a phone number.
-        bottom: math.max(media.padding.bottom, BrewSpace.grid * 2) +
+        bottom:
+            math.max(media.padding.bottom, BrewSpace.grid * 2) +
             media.viewInsets.bottom,
       ),
       child: child,
@@ -2657,15 +2681,22 @@ class _ItemHeadline extends StatelessWidget {
           borderRadius: BorderRadius.circular(BrewSpace.radius),
           child: SizedBox.square(
             dimension: _thumb,
-            child: bytes == null
-                ? ColoredBox(color: BrewColor.sage.withValues(alpha: 0.35))
-                : Image.memory(
+            child: Builder(
+              builder: (context) {
+                if (bytes != null) {
+                  return Image.memory(
                     bytes,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stack) => ColoredBox(
                       color: BrewColor.sage.withValues(alpha: 0.35),
                     ),
-                  ),
+                  );
+                }
+                return ColoredBox(
+                  color: BrewColor.sage.withValues(alpha: 0.35),
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(width: BrewSpace.grid * 2),
@@ -2723,8 +2754,9 @@ class _ExtraSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chosen =
-        options.where((option) => selected.contains(option.id)).length;
+    final chosen = options
+        .where((option) => selected.contains(option.id))
+        .length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2911,8 +2943,9 @@ class _OptionRowState extends State<_OptionRow> {
       radius: BrewSpace.radius,
       pressed: false,
       reduced: reduced,
-      semanticsLabel:
-          widget.selected ? '${widget.label}, selected' : widget.label,
+      semanticsLabel: widget.selected
+          ? '${widget.label}, selected'
+          : widget.label,
       child: ExcludeSemantics(
         child: AnimatedContainer(
           duration: reduced ? Duration.zero : BrewMotion.press,
@@ -2937,8 +2970,9 @@ class _OptionRowState extends State<_OptionRow> {
                       widget.label,
                       style: widget.selected
                           ? BrewType.rowTitle
-                          : BrewType.rowTitle
-                              .copyWith(color: BrewColor.sageLight),
+                          : BrewType.rowTitle.copyWith(
+                              color: BrewColor.sageLight,
+                            ),
                     ),
                     if (widget.note case final note?) ...[
                       const SizedBox(height: BrewSpace.grid * 0.5),
@@ -3334,21 +3368,21 @@ class _QuantityCapSheet extends StatelessWidget {
             style: BrewType.displayAt(24),
           ),
           const SizedBox(height: BrewSpace.grid * 2),
-          Text(
-            switch ((activeOrders, bankedQuantity)) {
-              (0, 0) => "This app is early in development, so one drink is "
+          Text(switch ((activeOrders, bankedQuantity)) {
+            (0, 0) =>
+              "This app is early in development, so one drink is "
                   'capped at $max at a time. Add this line and use Add '
                   'another drink for more of the same.',
-              (0, _) => "This app is early in development, so one reader can "
+            (0, _) =>
+              "This app is early in development, so one reader can "
                   'have five drinks in one order. This order already has '
                   '$bankedQuantity, which leaves room for $max here.',
-              _ => "This app is early in development, so one reader can have "
+            _ =>
+              "This app is early in development, so one reader can have "
                   'five drinks in play at once, counting both what is '
                   'already at the counter and what is in this order. You '
                   'have $orders open, which leaves room for $max here.',
-            },
-            style: BrewType.rowBody,
-          ),
+          }, style: BrewType.rowBody),
           const SizedBox(height: BrewSpace.grid * 4),
           BrewPrimaryButton(
             label: 'Got it',
@@ -3385,7 +3419,10 @@ class _OrderCapSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('You already have $max orders open.', style: BrewType.displayAt(24)),
+          Text(
+            'You already have $max orders open.',
+            style: BrewType.displayAt(24),
+          ),
           const SizedBox(height: BrewSpace.grid * 2),
           Text(
             'This app is early in development, so it asks you to wait for '
@@ -3527,13 +3564,10 @@ class _SummaryBlock extends StatelessWidget {
         const SizedBox(height: BrewSpace.grid * 3),
         Text('PICKUP TIME', style: BrewType.mono),
         const SizedBox(height: BrewSpace.grid),
-        Text(
-          switch (scheduledFor) {
-            final at? => BrewOrder.formatWhen(at),
-            null => 'As soon as it is ready',
-          },
-          style: BrewType.body,
-        ),
+        Text(switch (scheduledFor) {
+          final at? => BrewOrder.formatWhen(at),
+          null => 'As soon as it is ready',
+        }, style: BrewType.body),
         const SizedBox(height: BrewSpace.grid * 3),
         Text('PAYMENT', style: BrewType.mono),
         const SizedBox(height: BrewSpace.grid),
@@ -3584,20 +3618,17 @@ class _DoneBody extends StatelessWidget {
         children: [
           StaggerItem(
             index: 0,
-            child: Text(
-              switch (scheduledFor) {
-                final at? =>
-                  '${shop.displayName} has your order for '
-                      '${BrewOrder.formatWhen(at)}. We will call for '
-                      '$pickupName when it is ready — track it from the home '
-                      'screen.',
-                null =>
-                  '${shop.displayName} has your order. We will call for '
-                      '$pickupName when it is ready — track it from the home '
-                      'screen.',
-              },
-              style: BrewType.rowBody,
-            ),
+            child: Text(switch (scheduledFor) {
+              final at? =>
+                '${shop.displayName} has your order for '
+                    '${BrewOrder.formatWhen(at)}. We will call for '
+                    '$pickupName when it is ready — track it from the home '
+                    'screen.',
+              null =>
+                '${shop.displayName} has your order. We will call for '
+                    '$pickupName when it is ready — track it from the home '
+                    'screen.',
+            }, style: BrewType.rowBody),
           ),
           const SizedBox(height: BrewSpace.grid * 3),
           for (final (index, line) in lines.indexed) ...[

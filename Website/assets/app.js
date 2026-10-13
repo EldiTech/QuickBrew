@@ -6,7 +6,7 @@
 const DEFAULT_WEB_CONFIG = {
   versionTag: 'v1.0.0 Stable',
   buildNumber: '1.0.0+1',
-  apkSize: '55.1 MB',
+  apkSize: '56.0 MB',
   minAndroid: 'Android 6.0+ (Marshmallow)',
   apkFileName: 'quickbrew-release.apk',
   checksum: 'CFAD5848B2287D5BE537E88DB1FE04A1AF2B64D8AD1595DDF19C3059F6E75E9B',

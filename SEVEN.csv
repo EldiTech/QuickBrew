@@ -1,0 +1,126 @@
+﻿Main Category,Kind,Product Name
+Iced Coffee,Classic Coffee,Americano
+Iced Coffee,Classic Coffee,Cafe Latte
+Iced Coffee,Classic Coffee,Cafe Mocha
+Iced Coffee,Classic Coffee,Mocha Almond
+Iced Coffee,Classic Coffee,Caramel Macchiato
+Iced Coffee,Classic Coffee,Hazelnut Macchiato
+Iced Coffee,Classic Coffee,Salted Caramel
+Iced Coffee,Classic Coffee,Spanish Latte
+Iced Coffee,Classic Coffee,Vanilla Macchiato
+Iced Coffee,Special Coffee,Salty Cream Coffee
+Iced Coffee,Special Coffee,Vietnamese Coffee
+Iced Coffee,Special Coffee,White Mocha
+Iced Coffee,Special Coffee,Seven Coffee with Pearl
+Iced Coffee,Special Coffee,Dirty Matcha
+Iced Coffee,Special Coffee,Ube Espresso
+Iced Coffee,Special Coffee,Avo Espresso
+Iced Coffee,Special Coffee,Sea Salt Latte
+Iced Coffee,Special Coffee,Velvet Cream Latte
+Iced Coffee,Special Coffee,Cloud Caramel
+Iced Coffee,Special Coffee,Strawberry Espresso
+Iced Coffee,Special Coffee,Choc-Nut Latte
+Iced Coffee,Special Coffee,Cookie Butter Latte
+Iced Non-Coffee,Classic Non-Coffee,Iced Choco
+Iced Non-Coffee,Classic Non-Coffee,Chocolate Almond
+Iced Non-Coffee,Classic Non-Coffee,Strawberry Pink
+Iced Non-Coffee,Classic Non-Coffee,Matcha Latte
+Iced Non-Coffee,Classic Non-Coffee,Ube Latte
+Iced Non-Coffee,Classic Non-Coffee,Avo Latte (Avocado)
+Iced Non-Coffee,Special Non-Coffee,Blueberry Milk
+Iced Non-Coffee,Special Non-Coffee,Choco Berry
+Iced Non-Coffee,Special Non-Coffee,Oreo Luxe
+Iced Non-Coffee,Special Non-Coffee,Oreo Milo Lava
+Iced Non-Coffee,Special Non-Coffee,Velvet Biscoff
+Iced Non-Coffee,Special Non-Coffee,Matcha Berry
+Iced Non-Coffee,Special Non-Coffee,Velvet Matcha
+Iced Non-Coffee,Special Non-Coffee,Birthday Matcha
+Iced Non-Coffee,Special Non-Coffee,Mango Matcha
+Iced Non-Coffee,Special Non-Coffee,Biscoff Matcha
+Hot Beverages,Hot Drinks,Americano
+Hot Beverages,Hot Drinks,Cafe Latte
+Hot Beverages,Hot Drinks,Cafe Mocha
+Hot Beverages,Hot Drinks,Caramel Macchiato
+Hot Beverages,Hot Drinks,Chocolate
+Hot Beverages,Hot Drinks,Hazelnut Macchiato
+Hot Beverages,Hot Drinks,Matcha Latte
+Hot Beverages,Hot Drinks,Salty Cream Coffee
+Hot Beverages,Hot Drinks,Spanish Latte
+Hot Beverages,Hot Drinks,Salted Caramel
+Hot Beverages,Hot Drinks,Vanilla Macchiato
+Hot Beverages,Hot Drinks,Vietnamese Coffee
+Salty Cream Series,Salty Cream,Salty Cream Coffee
+Salty Cream Series,Salty Cream,Salty Cream Matcha
+Salty Cream Series,Salty Cream,Salty Cream Ube
+Salty Cream Series,Salty Cream,Salty Cream Taro
+Salty Cream Series,Salty Cream,Salty Cream Chocolate
+Iced Blended,Frappe Series - Coffee Based,Dirty Avalanche
+Iced Blended,Frappe Series - Coffee Based,Java Frappe
+Iced Blended,Frappe Series - Coffee Based,Midnight Frappe
+Iced Blended,Frappe Series - Coffee Based,Caramel Frappe
+Iced Blended,Frappe Series - Other Flavors,Avalanche Biscoff
+Iced Blended,Frappe Series - Other Flavors,Matcha Green Tea
+Iced Blended,Frappe Series - Other Flavors,Oreo Upside Down Choco
+Iced Blended,Frappe Series - Other Flavors,Strawberry Ang Cream
+Iced Blended,Frappe Series - Other Flavors,Ma-Ube Frappe
+Iced Blended,Frappe Series - Other Flavors,Blueberry and Cream
+Refresher,Refresher Drink Types,Fruit Tea
+Refresher,Refresher Drink Types,Yakult
+Refresher,Refresher Drink Types,Soda
+Refresher,Refresher Flavors,Green Apple
+Refresher,Refresher Flavors,Strawberry
+Refresher,Refresher Flavors,Mixed Berries
+Refresher,Refresher Flavors,Lychee
+Refresher,Refresher Flavors,Passion Fruit
+Refresher,Refresher Flavors,Orange
+Milktea,Classic Milktea,Black Forest
+Milktea,Classic Milktea,Red Velvet
+Milktea,Classic Milktea,Matcha
+Milktea,Classic Milktea,Taro
+Milktea,Classic Milktea,Dark Chocolate
+Milktea,Classic Milktea,Cookies & Cream
+Milktea,Classic Milktea,Caramel Sugar
+Milktea,Classic Milktea,Brown Sugar
+Milktea,Classic Milktea,Wintermelon
+Milktea,Classic Milktea,Chocolate
+Milktea,Classic Milktea,Okinawa
+Milktea,Classic Milktea,Mango
+Milktea,Classic Milktea,Ube
+Milktea,Cream Cheese Milktea,Red Velvet Cream Cheese
+Milktea,Cream Cheese Milktea,Black Forest Cream Cheese
+Milktea,Cream Cheese Milktea,Cookies & Cream Cream Cheese
+Milktea,Cream Cheese Milktea,Taro Cream Cheese
+Milktea,Cheesecake Milktea,Matcha CK
+Milktea,Cheesecake Milktea,Dark Chocolate CK
+Milktea,Cheesecake Milktea,Chocolate CK
+Milktea,Cheesecake Milktea,Okinawa CK
+Milktea,Cheesecake Milktea,Mango CK
+Milktea,Cheesecake Milktea,Wintermelon CK
+Fresh Lemonade,Lemonade,Lemonade
+Fresh Lemonade,Lemonade,Tea Lemonade
+Fresh Lemonade,Lemonade,Strawberry Lemonade
+Fresh Lemonade,Lemonade,Green Apple Lemonade
+Fresh Lemonade,Lemonade,Kalamansi Lemonade
+Fresh Lemonade,Lemonade,Yakult Lemonade
+Fresh Lemonade,Lemonade,Orange Lemonade
+Fresh Lemonade,Lemonade,Cucumber Lemonade
+Fresh Lemonade,Lemonade,Watermelon Lemonade
+Fresh Lemonade,Lemonade,Honey Lemonade
+Add-Ons,Coffee,Espresso Shot
+Add-Ons,Drizzle,Chocolate Drizzle
+Add-Ons,Drizzle,Caramel Drizzle
+Add-Ons,Drizzle,Strawberry Drizzle
+Add-Ons,Syrup,Flavored Syrup
+Add-Ons,Sinkers,Pearls
+Add-Ons,Sinkers,Nata
+Add-Ons,Sinkers,Crushed Oreo
+Add-Ons,Sinkers,Coffee Jelly
+Add-Ons,Sinkers,Popping Boba SB
+Add-Ons,Toppings,Cream Cheese
+Add-Ons,Toppings,Cheesecake
+Add-Ons,Toppings,Whipping Cream
+Add-Ons,Toppings,Salty Cream
+Add-Ons,Toppings,Sea Salt Cream
+Add-Ons,Toppings,Fresh Jam - Strawberry
+Add-Ons,Toppings,Fresh Jam - Blueberry
+Add-Ons,Milk Choice,Oat Milk

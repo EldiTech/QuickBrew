@@ -101,21 +101,27 @@ class LandingScreen extends StatelessWidget {
                   : null,
             ),
             const SizedBox(width: BrewSpace.grid * 1.5),
-            StaggerItem(
-              index: 0,
-              child: Text.rich(
-                TextSpan(
-                  text: 'QuickBrew',
-                  style: BrewType.wordmark(20, color: BrewColor.cream),
-                  children: const [
+            Flexible(
+              child: StaggerItem(
+                index: 0,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text.rich(
                     TextSpan(
-                      text: '™',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                      ),
+                      text: 'QuickBrew',
+                      style: BrewType.wordmark(20, color: BrewColor.cream),
+                      children: const [
+                        TextSpan(
+                          text: '™',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -187,26 +193,44 @@ class LandingScreen extends StatelessWidget {
       );
     }
 
+    final topPadding = math.max(media.padding.top, BrewSpace.minInset) +
+        headerClearance;
+    final bottomPadding = math.max(
+      media.padding.bottom,
+      bottomInset,
+    );
+
+    Widget body = Padding(
+      padding: EdgeInsets.only(
+        left: BrewSpace.gutter,
+        right: BrewSpace.gutter,
+        top: topPadding,
+        bottom: bottomPadding,
+      ),
+      child: content,
+    );
+
+    // When viewport height is too shallow to fit all elements without clipping
+    // (e.g. narrow laptop windows, landscape, dev panels under 560dp), allow
+    // vertical scrolling so controls stay reachable without overflow errors.
+    if (media.size.height < 560) {
+      body = SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: media.size.height),
+          child: IntrinsicHeight(child: body),
+        ),
+      );
+    }
+
     return Material(
       color: BrewColor.darkField,
       child: BrewBackground(
         child: StaggerGroup(
-            itemCount: _staggerCount,
-            reveal: reveal,
-            reduced: reduced,
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: BrewSpace.gutter,
-                right: BrewSpace.gutter,
-                top: math.max(media.padding.top, BrewSpace.minInset) +
-                    headerClearance,
-                bottom: math.max(
-                  media.padding.bottom,
-                  bottomInset,
-                ),
-              ),
-              child: content,
-          ),
+          itemCount: _staggerCount,
+          reveal: reveal,
+          reduced: reduced,
+          child: body,
         ),
       ),
     );

@@ -89,6 +89,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - assets/images/classic_coffees/
     # The Seven Coffee & Tea board, as transcribed. Bundled rather than
     # fetched so the admin import runs offline — see BrewMenuSeed.
     - assets/menu/

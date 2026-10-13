@@ -22,10 +22,14 @@ class BrewShopMark extends StatelessWidget {
     super.key,
     required this.shop,
     required this.dimension,
+    this.fit = BoxFit.cover,
+    this.showFrame = true,
   });
 
   final BrewShop shop;
   final double dimension;
+  final BoxFit fit;
+  final bool showFrame;
 
   @override
   Widget build(BuildContext context) {
@@ -36,21 +40,25 @@ class BrewShopMark extends StatelessWidget {
       width: dimension,
       height: dimension,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        border: Border.all(color: BrewColor.hairline),
-        borderRadius: BorderRadius.circular(BrewSpace.radius),
-      ),
+      decoration: showFrame
+          ? BoxDecoration(
+              border: Border.all(color: BrewColor.hairline),
+              borderRadius: BorderRadius.circular(BrewSpace.radius),
+            )
+          : null,
       // The border stays under a real logo, so supplied artwork and a monogram
       // occupy the identical box and two cards cannot end up different shapes
       // depending on which partner has uploaded something.
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(BrewSpace.radius),
+        borderRadius: showFrame
+            ? BorderRadius.circular(BrewSpace.radius)
+            : BorderRadius.zero,
         child: switch ((bytes, url)) {
           (final bytes?, _) => Image.memory(
             bytes,
             width: dimension,
             height: dimension,
-            fit: BoxFit.cover,
+            fit: fit,
             // Already-decoded bytes still fail if they are not an image format
             // the engine knows.
             errorBuilder: (context, error, stack) => _monogram(),
@@ -59,7 +67,7 @@ class BrewShopMark extends StatelessWidget {
             url,
             width: dimension,
             height: dimension,
-            fit: BoxFit.cover,
+            fit: fit,
             errorBuilder: (context, error, stack) => _monogram(),
             // The monogram holds the slot while the bytes are in flight, so the
             // card does not reflow when they land.
@@ -75,8 +83,9 @@ class BrewShopMark extends StatelessWidget {
   Widget _monogram() => Center(
     child: Text(
       shop.partner.monogram,
-      style: BrewType.displayAt(dimension * 0.46)
-          .copyWith(color: BrewColor.sageLight),
+      style: BrewType.displayAt(
+        dimension * 0.46,
+      ).copyWith(color: BrewColor.sageLight),
     ),
   );
 }

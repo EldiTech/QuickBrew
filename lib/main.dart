@@ -12,8 +12,8 @@ import 'screens/create_account_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/maintenance_screen.dart';
-import 'screens/menu_screen.dart';
 import 'screens/order_wizard_screen.dart';
+import 'screens/store_landing_screen.dart';
 import 'services/system_maintenance.dart';
 import 'theme/brew_type.dart';
 import 'theme/tokens.dart';
@@ -194,9 +194,12 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
       }
     });
 
-    // Started here rather than lazily on the first screen that wants it — the
-    // point is the head start. See [_shopsWarm].
-    _shopsWarm = backend.counter?.shops().listen((_) {});
+    // Started here for restored sessions rather than lazily on the first screen
+    // that wants it — the point is the head start. Unauthenticated readers on
+    // landing wait until sign-in before querying shops. See [_shopsWarm].
+    if (_session != null) {
+      _shopsWarm = backend.counter?.shops().listen((_) {});
+    }
 
     _watch = auth?.sessions.listen(_onSession);
   }
@@ -207,6 +210,9 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
     setState(() => _session = session);
     if (_showHome != was) _clearStack();
     _syncProfile(session);
+    if (session != null && _shopsWarm == null) {
+      _shopsWarm = _counter?.shops().listen((_) {});
+    }
   }
 
   /// Keeps [_profile] pointed at whoever [_session] now is.
@@ -438,7 +444,7 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
   /// screen holding state on the wizard's behalf.
   void _openMenu(BuildContext context, BrewShop shop) {
     Navigator.of(context).push(
-      MenuScreen.route(
+      StoreLandingScreen.route(
         reduced: MediaQuery.disableAnimationsOf(context),
         shop: shop,
         session: _session,
@@ -519,6 +525,8 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
     _profileWatch = null;
     _profileDeadline?.cancel();
     _profileDeadline = null;
+    _shopsWarm?.cancel();
+    _shopsWarm = null;
     _counter?.clearCache();
 
     final was = _showHome;

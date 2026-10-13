@@ -164,7 +164,7 @@ void main() {
       expect(find.textContaining('there'), findsNothing);
     });
 
-    testWidgets('carries the two header actions and no wordmark', (
+    testWidgets('carries the brand header and two action buttons', (
       tester,
     ) async {
       await pumpHome(tester);
@@ -172,11 +172,7 @@ void main() {
       expect(find.byType(BrewIconMark), findsNWidgets(2));
       expect(find.bySemanticsLabel('Notifications'), findsOneWidget);
       expect(find.bySemanticsLabel('Your profile'), findsOneWidget);
-      expect(
-        find.text('QuickBrew'),
-        findsNothing,
-        reason: 'the greeting is this screen\'s masthead',
-      );
+      expect(find.text('QuickBrew'), findsOneWidget);
     });
   });
 
