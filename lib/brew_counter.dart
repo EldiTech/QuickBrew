@@ -5,6 +5,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+/// The fixed fee QuickBrew adds once per order transaction.
+const quickBrewPlatformFeeCents = 500;
+
+/// Returns the customer-facing order total for a cart subtotal.
+int quickBrewOrderTotalCents(int subtotalCents) =>
+    subtotalCents + quickBrewPlatformFeeCents;
+
 /// The two partner shops, and there are two.
 ///
 /// Their names and descriptions ship with the app rather than arriving from
@@ -95,6 +102,11 @@ class BrewShop {
     required this.status,
     this.name,
     this.description,
+    this.story,
+    this.weekdayHours,
+    this.weekendHours,
+    this.address,
+    this.contact,
     this.logoUrl,
     this.logoBytes,
     this.payQrBytes,
@@ -127,6 +139,12 @@ class BrewShop {
   /// The one line under the name, if an admin has set it. Null falls back to
   /// [BrewPartner.description].
   final String? description;
+
+  final String? story;
+  final String? weekdayHours;
+  final String? weekendHours;
+  final String? address;
+  final String? contact;
 
   /// A logo hosted somewhere else. Kept alongside [logoBytes] because both are
   /// legitimate — a partner with a CDN should not have to paste a data URI —
@@ -163,7 +181,10 @@ class BrewShop {
   /// Falls back per partner, so a lookup always yields a name even for a shop
   /// the snapshot did not include.
   static String nameOf(BrewPartner partner, List<BrewShop>? shops) =>
-      shops?.where((shop) => shop.partner == partner).firstOrNull?.displayName ??
+      shops
+          ?.where((shop) => shop.partner == partner)
+          .firstOrNull
+          ?.displayName ??
       partner.name;
 }
 
@@ -190,7 +211,10 @@ enum BrewOrderStage {
   /// that rule at all — see [isActive] — so its index never has to fit on it,
   /// but inserting it earlier would have shifted every stage after it and
   /// silently relabelled the rule's own segments.
-  rejected('Order declined');
+  rejected('Order declined'),
+
+  /// Cancelled by the reader before the shop started preparing it.
+  cancelled('Order cancelled');
 
   const BrewOrderStage(this.label);
 
@@ -215,7 +239,10 @@ enum BrewOrderStage {
   /// declined — and everything before either is something the reader may
   /// still be walking towards, which is what puts the card on the home
   /// screen.
-  bool get isActive => this != BrewOrderStage.completed && this != BrewOrderStage.rejected;
+  bool get isActive =>
+      this != BrewOrderStage.completed &&
+      this != BrewOrderStage.rejected &&
+      this != BrewOrderStage.cancelled;
 
   /// The stage after this one, or null once there is nowhere further to go —
   /// the same shape [_Step.next] gives the order wizard. What the admin
@@ -228,12 +255,13 @@ enum BrewOrderStage {
   /// whichever active stage the order was in, which is a jump this getter
   /// deliberately does not offer for any other stage.
   BrewOrderStage? get next => switch (this) {
-        BrewOrderStage.received => BrewOrderStage.preparing,
-        BrewOrderStage.preparing => BrewOrderStage.ready,
-        BrewOrderStage.ready => BrewOrderStage.completed,
-        BrewOrderStage.completed => null,
-        BrewOrderStage.rejected => null,
-      };
+    BrewOrderStage.received => BrewOrderStage.preparing,
+    BrewOrderStage.preparing => BrewOrderStage.ready,
+    BrewOrderStage.ready => BrewOrderStage.completed,
+    BrewOrderStage.completed => null,
+    BrewOrderStage.rejected => null,
+    BrewOrderStage.cancelled => null,
+  };
 }
 
 /// One order, as the home screen and the orders list need it.
@@ -260,10 +288,7 @@ class BrewOrder {
   /// Null when the document is missing a stage or its items — see
   /// [BrewOrderStage.parse]. Returned rather than thrown because one malformed
   /// order should cost the reader that one card, not the whole screen.
-  static BrewOrder? read(
-    String id,
-    Map<String, Object?> data,
-  ) {
+  static BrewOrder? read(String id, Map<String, Object?> data) {
     final stage = BrewOrderStage.parse(data['stage']);
     if (stage == null) return null;
 
@@ -419,13 +444,21 @@ class BrewOrder {
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
-  static const _weekdays = [
-    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
-  ];
+  static const _weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   /// "2 Aug, 3:41 PM" — hand-formatted rather than pulling in `intl`, the
   /// same call [BrewMenuItem]'s own peso formatting makes and for the same
@@ -438,7 +471,10 @@ class BrewOrder {
   /// "5:45 PM". The clock half, for a card that sets the day and the time on
   /// two different lines.
   static String formatClock(DateTime at) {
-    final hour12 = switch (at.hour % 12) { 0 => 12, final h => h };
+    final hour12 = switch (at.hour % 12) {
+      0 => 12,
+      final h => h,
+    };
     final minute = at.minute.toString().padLeft(2, '0');
     return '$hour12:$minute ${at.hour < 12 ? 'AM' : 'PM'}';
   }
@@ -828,6 +864,200 @@ class BrewAddOn {
   String get priceLabel => '+${BrewMenuItem._formatCents(priceCents)}';
 }
 
+/// A full photographic menu board or poster for one shop, e.g. Seven Coffee & Tea's
+/// laminated board 1 and board 2.
+///
+/// Stored in Firestore under `shops/{partner.id}/whole_menu/{boardId}` so that
+/// admins and super admins can configure, reorder, upload or delete menu boards
+/// dynamically without hardcoding.
+class BrewWholeMenuBoard {
+  const BrewWholeMenuBoard({
+    required this.id,
+    required this.title,
+    this.description,
+    this.imageBytes,
+    this.assetPath,
+    this.aspectRatio,
+    this.sort = 0,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String title;
+  final String? description;
+  final Uint8List? imageBytes;
+  final String? assetPath;
+
+  /// Width divided by height for this board. Portrait boards keep their type
+  /// large enough to read on a phone.
+  final double? aspectRatio;
+  final double sort;
+  final DateTime? updatedAt;
+
+  static BrewWholeMenuBoard? read(String id, Map<String, Object?> data) {
+    final title = switch (data['title']) {
+      final String value when value.trim().isNotEmpty => value.trim(),
+      _ => 'Menu Board',
+    };
+
+    return BrewWholeMenuBoard(
+      id: id,
+      title: title,
+      description: switch (data['description']) {
+        final String value when value.trim().isNotEmpty => value.trim(),
+        _ => null,
+      },
+      sort: switch (data['sort']) {
+        final num value => value.toDouble(),
+        _ => 0.0,
+      },
+      imageBytes: _decodeBase64Image(data['imageBase64'] as String?),
+      assetPath: data['assetPath'] as String?,
+      aspectRatio: switch (data['aspectRatio']) {
+        final num value when value > 0 => value.toDouble(),
+        _ => null,
+      },
+      updatedAt: switch (data['updatedAt']) {
+        final Timestamp value => value.toDate(),
+        final DateTime value => value,
+        _ => null,
+      },
+    );
+  }
+
+  Map<String, Object?> toMap() => {
+    'title': title,
+    if (description != null) 'description': description,
+    'sort': sort,
+    if (imageBytes != null) 'imageBase64': base64Encode(imageBytes!),
+    if (assetPath != null) 'assetPath': assetPath,
+    if (aspectRatio != null) 'aspectRatio': aspectRatio,
+    'updatedAt': FieldValue.serverTimestamp(),
+  };
+
+  static int byBoardOrder(BrewWholeMenuBoard a, BrewWholeMenuBoard b) {
+    final cmp = a.sort.compareTo(b.sort);
+    if (cmp != 0) return cmp;
+    return a.title.compareTo(b.title);
+  }
+
+  /// Seven's first photographic boards were landscape images without an
+  /// aspect-ratio field. They are kept in Firestore for recovery, but replaced
+  /// in the reader by the bundled portrait redesign. A later admin upload
+  /// always carries [aspectRatio], so it immediately takes precedence again.
+  static List<BrewWholeMenuBoard> resolveFor(
+    BrewPartner partner,
+    List<BrewWholeMenuBoard> liveBoards,
+  ) {
+    if (liveBoards.isEmpty ||
+        (partner == BrewPartner.b &&
+            liveBoards.every((board) => board.aspectRatio == null))) {
+      return defaultsFor(partner);
+    }
+    return liveBoards;
+  }
+
+  static List<BrewWholeMenuBoard> defaultsFor(BrewPartner partner) {
+    if (partner == BrewPartner.b) {
+      return const [
+        BrewWholeMenuBoard(
+          id: 'seven_menu_1_iced_coffee',
+          title: 'Iced Coffee',
+          description: 'Classic and special coffee',
+          assetPath:
+              'assets/menu/seven_redesigned/seven_menu_1_iced_coffee.png',
+          aspectRatio: 9 / 16,
+          sort: 1,
+        ),
+        BrewWholeMenuBoard(
+          id: 'seven_menu_2_non_coffee',
+          title: 'Iced Non-Coffee',
+          description: 'Classic and special non-coffee drinks',
+          assetPath: 'assets/menu/seven_redesigned/seven_menu_2_non_coffee.png',
+          aspectRatio: 9 / 16,
+          sort: 2,
+        ),
+        BrewWholeMenuBoard(
+          id: 'seven_menu_3_hot_and_salty',
+          title: 'Hot and Salty',
+          description: 'Hot beverages and salty cream series',
+          assetPath:
+              'assets/menu/seven_redesigned/seven_menu_3_hot_and_salty.png',
+          aspectRatio: 9 / 16,
+          sort: 3,
+        ),
+        BrewWholeMenuBoard(
+          id: 'seven_menu_4_iced_blended',
+          title: 'Iced Blended',
+          description: 'Frappe series',
+          assetPath:
+              'assets/menu/seven_redesigned/seven_menu_4_iced_blended.png',
+          aspectRatio: 9 / 16,
+          sort: 4,
+        ),
+        BrewWholeMenuBoard(
+          id: 'seven_menu_5_milktea',
+          title: 'Milktea',
+          description: 'Classic, cream cheese, and cheesecake milktea',
+          assetPath: 'assets/menu/seven_redesigned/seven_menu_5_milktea.png',
+          aspectRatio: 9 / 16,
+          sort: 5,
+        ),
+        BrewWholeMenuBoard(
+          id: 'seven_menu_6_refreshers',
+          title: 'Refreshers',
+          description: 'Fruit tea, Yakult, and soda',
+          assetPath: 'assets/menu/seven_redesigned/seven_menu_6_refreshers.png',
+          aspectRatio: 9 / 16,
+          sort: 6,
+        ),
+        BrewWholeMenuBoard(
+          id: 'seven_menu_7_lemonade',
+          title: 'Fresh Lemonade',
+          description: 'Fresh lemonade drinks',
+          assetPath: 'assets/menu/seven_redesigned/seven_menu_7_lemonade.png',
+          aspectRatio: 9 / 16,
+          sort: 7,
+        ),
+      ];
+    }
+    return const [
+      BrewWholeMenuBoard(
+        id: 'drip_menu_1_specials',
+        title: 'Special Coffees',
+        description: 'Hello Vietnam, tiramisu and specialty coffee',
+        assetPath: 'assets/menu/drip_redesigned/drip_menu_1_specials.png',
+        aspectRatio: 9 / 16,
+        sort: 1,
+      ),
+      BrewWholeMenuBoard(
+        id: 'drip_menu_2_ca_phe_series',
+        title: 'Cà Phê Series',
+        description: 'Classic and premium coffee',
+        assetPath: 'assets/menu/drip_redesigned/drip_menu_2_ca_phe_series.png',
+        aspectRatio: 9 / 16,
+        sort: 2,
+      ),
+      BrewWholeMenuBoard(
+        id: 'drip_menu_3_premium_coffee',
+        title: 'Premium Coffee',
+        description: 'Lattes, mocha and nut-and-cream specials',
+        assetPath: 'assets/menu/drip_redesigned/drip_menu_3_premium_coffee.png',
+        aspectRatio: 9 / 16,
+        sort: 3,
+      ),
+      BrewWholeMenuBoard(
+        id: 'drip_menu_4_milky_series',
+        title: 'Milky Series',
+        description: 'Milk drinks, cocoa and Biscoff',
+        assetPath: 'assets/menu/drip_redesigned/drip_menu_4_milky_series.png',
+        aspectRatio: 9 / 16,
+        sort: 4,
+      ),
+    ];
+  }
+}
+
 /// One line of a saved order, as the draft document stores it.
 ///
 /// Ids, not resolved objects — and that is the whole design of this class. A
@@ -924,6 +1154,7 @@ class BrewDraft {
     required this.paymentMethod,
     this.scheduledFor,
     this.savedAt,
+    this.awaitingPayment = false,
   });
 
   /// Null when the draft names a shop this build does not know, or has no lines
@@ -963,6 +1194,7 @@ class BrewDraft {
         final Timestamp stamp => stamp.toDate(),
         _ => null,
       },
+      awaitingPayment: data['awaitingPayment'] == true,
     );
   }
 
@@ -990,6 +1222,12 @@ class BrewDraft {
 
   final DateTime? savedAt;
 
+  /// True when the reader reached the payment step with no connection and the
+  /// wizard saved the order for them to pay and upload a receipt later. Drawn
+  /// on the Orders tab as an order waiting on payment rather than an ordinary
+  /// bookmark, and resumed straight onto the payment step.
+  final bool awaitingPayment;
+
   /// How many drinks are in it, quantities counted. The figure the card prints.
   ///
   /// The accumulators below are named `total` rather than the `sum` the wizard
@@ -1000,10 +1238,8 @@ class BrewDraft {
 
   /// What it cost when it was saved. Only ever used to compare against a fresh
   /// costing — see [BrewDraftLine.unitCents].
-  int get savedTotalCents => lines.fold(
-    0,
-    (total, line) => total + line.unitCents * line.quantity,
-  );
+  int get savedTotalCents =>
+      lines.fold(0, (total, line) => total + line.unitCents * line.quantity);
 
   /// Whether re-costing these lines against [items] and [addOns] gives a
   /// different figure from the one saved.
@@ -1040,6 +1276,7 @@ class BrewDraft {
     'pickupNote': pickupNote,
     'paymentMethod': paymentMethod,
     if (scheduledFor case final at?) 'scheduledFor': Timestamp.fromDate(at),
+    if (awaitingPayment) 'awaitingPayment': true,
     'savedAt': FieldValue.serverTimestamp(),
   };
 }
@@ -1206,9 +1443,7 @@ class BrewCounter {
         .collection(_shops)
         .snapshots()
         .map((snapshot) {
-          final docs = {
-            for (final doc in snapshot.docs) doc.id: doc.data(),
-          };
+          final docs = {for (final doc in snapshot.docs) doc.id: doc.data()};
           final shops = [
             for (final partner in BrewPartner.values)
               _readShop(partner, docs[partner.id]),
@@ -1237,6 +1472,11 @@ class BrewCounter {
       },
       name: _trimmedOrNull(data?['name']),
       description: _trimmedOrNull(data?['description']),
+      story: _trimmedOrNull(data?['story']),
+      weekdayHours: _trimmedOrNull(data?['weekdayHours']),
+      weekendHours: _trimmedOrNull(data?['weekendHours']),
+      address: _trimmedOrNull(data?['address']),
+      contact: _trimmedOrNull(data?['contact']),
       logoUrl: url is String && url.trim().isNotEmpty ? url.trim() : null,
       logoBytes: _decodeBase64Image(_trimmedOrNull(data?['logoBase64'])),
       payQrBytes: _decodeBase64Image(_trimmedOrNull(data?['payQrBase64'])),
@@ -1281,9 +1521,9 @@ class BrewCounter {
   /// app deletes an order — so the screen can tell "not this reader's" apart
   /// from "still loading" the same way every other stream on it does.
   Stream<BrewOrder?> order(String uid, String id) {
-    return _ordersFor(_currentUid(uid)).map(
-      (orders) => orders.where((order) => order.id == id).firstOrNull,
-    );
+    return _ordersFor(
+      _currentUid(uid),
+    ).map((orders) => orders.where((order) => order.id == id).firstOrNull);
   }
 
   /// What one shop sells, in the order the shop put it in.
@@ -1335,7 +1575,8 @@ class BrewCounter {
         .snapshots()
         .map((snapshot) {
           final addOns = [
-            for (final doc in snapshot.docs) ?BrewAddOn.read(doc.id, doc.data()),
+            for (final doc in snapshot.docs)
+              ?BrewAddOn.read(doc.id, doc.data()),
           ];
           addOns.sort(BrewAddOn.byBoardOrder);
           return addOns;
@@ -1343,6 +1584,35 @@ class BrewCounter {
         .handleError((Object error) {
           debugPrint('QuickBrew → ${partner.id} add-ons unavailable: $error');
           throw error;
+        });
+  }
+
+  static const _wholeMenu = 'whole_menu';
+
+  /// What full menu posters or boards one shop displays, in display order.
+  ///
+  /// Backed by the separate Firestore collection `shops/{partner.id}/whole_menu`,
+  /// falling back to the shop's bundled default boards when the collection has
+  /// not yet been populated.
+  Stream<List<BrewWholeMenuBoard>> wholeMenu(BrewPartner partner) {
+    return _db
+        .collection(_shops)
+        .doc(partner.id)
+        .collection(_wholeMenu)
+        .snapshots()
+        .map((snapshot) {
+          final boards = [
+            for (final doc in snapshot.docs)
+              ?BrewWholeMenuBoard.read(doc.id, doc.data()),
+          ];
+          boards.sort(BrewWholeMenuBoard.byBoardOrder);
+          return BrewWholeMenuBoard.resolveFor(partner, boards);
+        })
+        .handleError((Object error) {
+          debugPrint(
+            'QuickBrew → ${partner.id} whole_menu unavailable: $error',
+          );
+          return BrewWholeMenuBoard.defaultsFor(partner);
         });
   }
 
@@ -1355,6 +1625,15 @@ class BrewCounter {
   /// screenshot the wizard actually uploads, and still leaves the rest of the
   /// order a wide margin.
   static const maxReceiptChars = 500 * 1024;
+
+  /// The most lines one order may carry — mirrored in firestore.rules.
+  static const maxOrderItems = 100;
+
+  /// How long [saveDraft] waits for the server before treating its write as
+  /// queued on the device. Long enough for a slow but working connection to
+  /// answer; short enough that a reader in a dead zone is not left watching a
+  /// spinner.
+  static const _offlineGrace = Duration(seconds: 3);
 
   /// Writes one order and returns null, or the sentence to show the reader.
   ///
@@ -1391,17 +1670,32 @@ class BrewCounter {
     DateTime? scheduledFor,
   }) async {
     if (items.isEmpty) return 'That order has nothing in it.';
+    if (paymentMethod != 'Full payment' && paymentMethod != 'Half payment') {
+      return 'Choose full payment or half payment before placing the order.';
+    }
+    if (receipt == null || receipt.isEmpty) {
+      return 'Upload proof of your payment before placing the order.';
+    }
+    final receiptBytes = receipt;
+    // The same ceilings validNewOrder() in firestore.rules enforces, checked
+    // here first so a refusal reads as a sentence rather than the generic
+    // failure below.
+    if (items.length > maxOrderItems) {
+      return 'That order has too many items. Split it into smaller orders.';
+    }
+    if (pickupName.length > 100) return 'That pickup name is too long.';
+    if (pickupPhone.length > 40) return 'That phone number is too long.';
+    if ((pickupNote?.length ?? 0) > 500) {
+      return 'That note is too long. Keep it under 500 characters.';
+    }
 
     // Encoded before the write rather than inside it, so a picture that cannot
     // fit is refused without a round trip — and so the sentence the reader gets
     // names the actual problem instead of the generic failure below.
-    String? encodedReceipt;
-    if (receipt != null) {
-      encodedReceipt = base64Encode(receipt);
-      if (encodedReceipt.length > maxReceiptChars) {
-        final kb = (encodedReceipt.length / 1024).round();
-        return 'That receipt is too large at ${kb}KB. Upload a smaller picture.';
-      }
+    final encodedReceipt = base64Encode(receiptBytes);
+    if (encodedReceipt.length > maxReceiptChars) {
+      final kb = (encodedReceipt.length / 1024).round();
+      return 'That receipt is too large at ${kb}KB. Upload a smaller picture.';
     }
 
     try {
@@ -1414,12 +1708,13 @@ class BrewCounter {
         'totalCents': totalCents,
         'pickupName': pickupName,
         'pickupPhone': pickupPhone,
-        if (pickupNote != null && pickupNote.isNotEmpty) 'pickupNote': pickupNote,
+        if (pickupNote != null && pickupNote.isNotEmpty)
+          'pickupNote': pickupNote,
         'paymentMethod': paymentMethod,
         // Absent rather than null on an order with no receipt, the same way
         // `scheduledFor` is below: nothing was uploaded, which is not the same
         // fact as an upload that came back empty.
-        'receiptBase64': ?encodedReceipt,
+        'receiptBase64': encodedReceipt,
         // Absent, not null, for an order to be made now — see
         // [BrewOrder.scheduledFor].
         if (scheduledFor case final at?) 'scheduledFor': Timestamp.fromDate(at),
@@ -1435,6 +1730,28 @@ class BrewCounter {
     } catch (error) {
       debugPrint('QuickBrew → order not placed: $error');
       return 'We could not place that order. Check your connection and try again.';
+    }
+  }
+
+  /// Cancels a newly received order before the shop starts preparing it.
+  ///
+  /// The Firestore rule is the final gate: only the owner may cancel, and only
+  /// while the order is still `received`. Once preparation begins, the reader
+  /// must contact the shop instead of removing a ticket from its queue.
+  Future<String?> cancelOrder({
+    required String uid,
+    required String orderId,
+  }) async {
+    try {
+      final ownerUid = _currentUid(uid);
+      if (ownerUid.isEmpty) return 'You must be signed in to cancel an order.';
+      await _db.collection(_orders).doc(orderId).update({
+        'stage': BrewOrderStage.cancelled.name,
+      });
+      return null;
+    } catch (error) {
+      debugPrint('QuickBrew → could not cancel order $orderId: $error');
+      return 'That order can no longer be cancelled. Contact the shop if you need help.';
     }
   }
 
@@ -1467,6 +1784,17 @@ class BrewCounter {
   ///
   /// One document per uid, overwritten — see [BrewDraft] on why there is not a
   /// list of these.
+  ///
+  /// ## Offline
+  ///
+  /// Works with no connection. Firestore writes to its on-device cache at once
+  /// and sends the write when the phone is back online — across restarts — and
+  /// the home screen's draft stream reads that cache, so the Saved order card
+  /// appears straight away. What does *not* happen offline is the future
+  /// below completing: it waits for the server to acknowledge, which in a dead
+  /// zone is never. So it is given [_offlineGrace] to answer; past that the
+  /// write is treated as queued, which it is, and its eventual outcome is only
+  /// logged.
   Future<String?> saveDraft({
     required String uid,
     required BrewDraft draft,
@@ -1474,10 +1802,23 @@ class BrewCounter {
     if (draft.lines.isEmpty) return 'That order has nothing in it yet.';
     try {
       final ownerUid = _currentUid(uid);
-      await _db.collection(_drafts).doc(ownerUid).set({
+      final write = _db.collection(_drafts).doc(ownerUid).set({
         ...draft.stored,
         'uid': ownerUid,
       });
+      // Watched separately so a refusal that arrives after the grace period
+      // is logged rather than escaping as an unhandled error.
+      unawaited(
+        write.catchError((Object error) {
+          debugPrint('QuickBrew → queued draft was refused: $error');
+        }),
+      );
+      await write.timeout(
+        _offlineGrace,
+        onTimeout: () {
+          debugPrint('QuickBrew → draft saved on this device; will sync later');
+        },
+      );
       return null;
     } catch (error) {
       debugPrint('QuickBrew → draft not saved: $error');
@@ -1514,7 +1855,8 @@ class BrewCounter {
           final orders = [
             // Null-aware element: a document this app cannot make an order out of
             // is dropped, and drops nothing else with it.
-            for (final doc in snapshot.docs) ?BrewOrder.read(doc.id, doc.data()),
+            for (final doc in snapshot.docs)
+              ?BrewOrder.read(doc.id, doc.data()),
           ];
           orders.sort(_newestFirst);
           return orders;
@@ -1568,20 +1910,17 @@ class BrewCounter {
       return event;
     });
 
-    return Stream<T>.multi(
-      (controller) {
-        if (known) controller.add(current);
-        final subscription = recorded.listen(
-          controller.add,
-          onError: controller.addError,
-          onDone: controller.close,
-        );
-        controller.onCancel = subscription.cancel;
-        controller.onPause = subscription.pause;
-        controller.onResume = subscription.resume;
-      },
-      isBroadcast: true,
-    );
+    return Stream<T>.multi((controller) {
+      if (known) controller.add(current);
+      final subscription = recorded.listen(
+        controller.add,
+        onError: controller.addError,
+        onDone: controller.close,
+      );
+      controller.onCancel = subscription.cancel;
+      controller.onPause = subscription.pause;
+      controller.onResume = subscription.resume;
+    }, isBroadcast: true);
   }
 
   /// Descending by `placedAt`, with an unstamped order counted as the newest

@@ -10,18 +10,21 @@ import '../theme/brew_type.dart';
 import '../theme/tokens.dart';
 import '../widgets/brew_background.dart';
 import '../widgets/shop_mark.dart';
+import '../widgets/stagger.dart';
+import '../widgets/brew_transitions.dart';
 import 'category_menu_screen.dart';
 import 'order_wizard_screen.dart';
+import 'whole_menu_screen.dart';
 
 /// Screen 2 of the visual design: The Store Landing Page.
 ///
 /// Features:
 /// - Hero banner with back button, seamlessly blended with the ambient background
 /// - Shop information (name, subtitle, OPEN status, location, hours)
-/// - Interactive tab pills (Menu, About, Photos, Reviews)
+/// - Interactive tab pills (Menu, About, Photos)
 /// - 3-column "MENU CATEGORIES" grid (derived from live menu with fallback)
-/// - "Try our Best Seller!" Dirty Avalanche promo card with direct ordering action
-/// - Rich About, Photos, and Reviews sections for the tabs
+/// - "Try our Best Seller!" store-specific promo card with direct ordering action
+/// - Rich About and Photos sections for the tabs
 /// - Floating bottom cart bar ("View Cart ₱96.00")
 class StoreLandingScreen extends StatefulWidget {
   const StoreLandingScreen({
@@ -41,17 +44,9 @@ class StoreLandingScreen extends StatefulWidget {
     BrewSession? session,
     BrewCounter? counter,
   }) {
-    final duration = reduced ? Duration.zero : BrewMotion.transit;
-    return PageRouteBuilder<void>(
-      transitionDuration: duration,
-      reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          StoreLandingScreen(shop: shop, session: session, counter: counter),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          FadeTransition(
-            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-            child: child,
-          ),
+    return brewPageRoute<void>(
+      reduced: reduced,
+      child: StoreLandingScreen(shop: shop, session: session, counter: counter),
     );
   }
 
@@ -65,7 +60,9 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
   static const _photosPageSize = 6;
   StreamSubscription<List<BrewMenuItem>>? _menuSubscription;
   List<BrewMenuItem> _menuItems = const [];
-  static const _tabs = ['Menu', 'About', 'Photos', 'Reviews'];
+  bool _menuLoading = true;
+  bool _expandAllCategories = false;
+  static const _tabs = ['Menu', 'About', 'Photos'];
 
   int get _safeSelectedTab {
     final t = (_selectedTab as dynamic);
@@ -79,11 +76,127 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
 
   static const _defaultCategories = [
     'Cà Phê Series',
+    'Hello Vietnam',
+    'Tiramisu',
+    'Premium',
+    'Milky Series',
+  ];
+
+  static const _sevenDefaultCategories = [
+    'Cà Phê Series',
     'Iced Blended',
     'Milk Tea',
     'Fresh Lemonade',
     'Refresher',
     'Add Ons',
+  ];
+
+  static const _defaultDripMenuItems = [
+    BrewMenuItem(
+      id: 'drip_ca_phe_sua_da',
+      name: 'Cà Phê Sữa Đá',
+      category: 'Hello Vietnam',
+      subCategory: 'Vietnamese Coffee',
+      description:
+          'Traditional slow-drip dark roast with sweetened condensed milk',
+      sizePrices: {BrewItemSize.medium: 5000, BrewItemSize.large: 6000},
+    ),
+    BrewMenuItem(
+      id: 'drip_egg_coffee',
+      name: 'Cà Phê Trứng (Egg Coffee)',
+      category: 'Hello Vietnam',
+      subCategory: 'Vietnamese Coffee',
+      description:
+          'Rich Vietnamese espresso topped with luscious whipped egg foam',
+      priceCents: 8800,
+    ),
+    BrewMenuItem(
+      id: 'drip_tiramisu_matcha',
+      name: 'Tiramisu Matcha',
+      category: 'Tiramisu',
+      subCategory: 'Tiramisu Drinks',
+      description:
+          'Ceremonial Japanese matcha layered with velvety mascarpone cream',
+      priceCents: 9800,
+    ),
+    BrewMenuItem(
+      id: 'drip_tiramisu_latte',
+      name: 'Tiramisu Latte',
+      category: 'Tiramisu',
+      subCategory: 'Tiramisu Drinks',
+      description:
+          'Handcrafted espresso with rich cocoa dust and tiramisu mascarpone',
+      priceCents: 9800,
+    ),
+    BrewMenuItem(
+      id: 'drip_americano',
+      name: 'Americano',
+      category: 'Cà Phê Series',
+      subCategory: 'Classic Coffee',
+      description:
+          'Double shot rich dark roast espresso over cold filtered water',
+      sizePrices: {BrewItemSize.medium: 3800, BrewItemSize.large: 4800},
+    ),
+    BrewMenuItem(
+      id: 'drip_ca_phe_espanol',
+      name: 'Cà Phê Español',
+      category: 'Cà Phê Series',
+      subCategory: 'Classic Coffee',
+      description: 'Spanish style espresso blend with smooth condensed milk',
+      sizePrices: {BrewItemSize.medium: 3800, BrewItemSize.large: 4800},
+    ),
+    BrewMenuItem(
+      id: 'drip_iced_latte',
+      name: 'Iced Latte',
+      category: 'Cà Phê Series',
+      subCategory: 'Classic Coffee',
+      description: 'Fresh pulled espresso shots with cold whole milk over ice',
+      sizePrices: {BrewItemSize.medium: 3800, BrewItemSize.large: 4800},
+    ),
+    BrewMenuItem(
+      id: 'drip_dolce_de_leche',
+      name: 'Dolce de Leche',
+      category: 'Premium',
+      subCategory: 'Premium Coffee',
+      description: 'Golden caramelized milk dulce syrup swirled with espresso',
+      sizePrices: {BrewItemSize.medium: 5500, BrewItemSize.large: 6500},
+    ),
+    BrewMenuItem(
+      id: 'drip_velvet_cream',
+      name: 'Velvet Cream Latte',
+      category: 'Premium',
+      subCategory: 'Premium Coffee',
+      description:
+          'Silky smooth velvet cream cold foam over double shot espresso',
+      sizePrices: {BrewItemSize.medium: 5500, BrewItemSize.large: 6500},
+    ),
+    BrewMenuItem(
+      id: 'drip_strawberry_milk',
+      name: 'Strawberry Milk',
+      category: 'Milky Series',
+      subCategory: 'Classic Milky',
+      description:
+          'Real strawberry reduction combined with cold whole dairy milk',
+      sizePrices: {BrewItemSize.medium: 3800, BrewItemSize.large: 4800},
+    ),
+    BrewMenuItem(
+      id: 'drip_cocoa',
+      name: 'Cocoa',
+      category: 'Milky Series',
+      subCategory: 'Classic Milky',
+      description:
+          'Dark Dutch processed cocoa powder whisked with warm and cold milk',
+      sizePrices: {BrewItemSize.medium: 5500, BrewItemSize.large: 6500},
+    ),
+    BrewMenuItem(
+      id: 'drip_milky_biscoff',
+      name: 'Milky Biscoff',
+      category: 'Milky Series',
+      subCategory: 'Classic Milky',
+      description:
+          'Cinnamon caramelized Lotus Biscoff spread blended with cold milk',
+      sizePrices: {BrewItemSize.medium: 6500, BrewItemSize.large: 7500},
+    ),
   ];
 
   static const _defaultMenuItems = [
@@ -96,7 +209,7 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
     ),
     BrewMenuItem(
       id: 'dirty_avalanche',
-      name: 'Signature Dirty Avalanche',
+      name: 'Dirty Avalanche',
       category: 'Iced Blended',
       description: 'Rich espresso layered over chilled artisan cream and cocoa',
       sizePrices: {BrewItemSize.medium: 8000, BrewItemSize.large: 9000},
@@ -179,9 +292,23 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
   void initState() {
     super.initState();
     final menu = widget.counter?.menu(widget.shop.partner);
-    _menuSubscription = menu?.listen((items) {
-      if (mounted) setState(() => _menuItems = items);
-    });
+    if (menu == null) {
+      _menuLoading = false;
+      return;
+    }
+    _menuSubscription = menu.listen(
+      (items) {
+        if (mounted) {
+          setState(() {
+            _menuItems = items;
+            _menuLoading = false;
+          });
+        }
+      },
+      onError: (Object _, StackTrace _) {
+        if (mounted) setState(() => _menuLoading = false);
+      },
+    );
   }
 
   @override
@@ -193,12 +320,50 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
   static String _cleanCategoryName(String raw) {
     final stripped = raw.replaceAll(RegExp(r'\s*\d+/\d+'), '').trim();
     if (stripped.isEmpty) return raw;
-    if (stripped.toLowerCase() == 'premium') return 'Premium Series';
     return stripped;
   }
 
   List<_CategoryItem> _categoriesFor(List<BrewMenuItem> items) {
     final live = BrewMenuItem.categoriesOf(items);
+    if (widget.shop.partner == BrewPartner.b) {
+      final names = live.isNotEmpty
+          ? live.map(_cleanCategoryName).toSet().toList()
+          : _sevenDefaultCategories;
+      return names
+          .map((name) {
+            final lower = name.toLowerCase();
+            final (
+              icon,
+              color,
+            ) = lower.contains('coffee') || lower.contains('cà')
+                ? (Icons.coffee_rounded, const Color(0xFFD4A373))
+                : lower.contains('blend') || lower.contains('frappe')
+                ? (Icons.icecream_rounded, const Color(0xFFC68B59))
+                : lower.contains('tea')
+                ? (Icons.bubble_chart_rounded, const Color(0xFFE0A96D))
+                : lower.contains('lemon')
+                ? (Icons.local_drink_rounded, const Color(0xFFE9C46A))
+                : lower.contains('fresh') || lower.contains('refresh')
+                ? (Icons.eco_rounded, const Color(0xFF81B29A))
+                : (Icons.local_cafe_rounded, const Color(0xFFB5838D));
+            return _CategoryItem(
+              id: name,
+              name: name,
+              icon: icon,
+              accentColor: color,
+              imageBytes: items
+                  .where(
+                    (item) =>
+                        _cleanCategoryName(item.category ?? '') == name &&
+                        item.imageBytes != null,
+                  )
+                  .map((item) => item.imageBytes)
+                  .firstOrNull,
+            );
+          })
+          .toList(growable: false);
+    }
+
     final names = live.isNotEmpty
         ? live.map(_cleanCategoryName).toSet().toList()
         : _defaultCategories;
@@ -246,48 +411,42 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
     );
   }
 
-  static String? _itemFallbackAsset(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('avalanche') || lower.contains('dirty')) {
-      return 'assets/images/dirty_avalanche.jpg';
-    } else if (lower.contains('americano')) {
-      return 'assets/images/classic_coffees/americano.jpg';
-    } else if (lower.contains('spanish')) {
-      return 'assets/images/classic_coffees/spanish_latte.jpg';
-    } else if (lower.contains('salted caramel')) {
-      return 'assets/images/classic_coffees/salted_caramel.jpg';
-    } else if (lower.contains('caramel macchiato')) {
-      return 'assets/images/classic_coffees/caramel_macchiato.jpg';
-    } else if (lower.contains('hazelnut')) {
-      return 'assets/images/classic_coffees/hazelnut_macchiato.jpg';
-    } else if (lower.contains('vanilla')) {
-      return 'assets/images/classic_coffees/vanilla_macchiato.jpg';
-    } else if (lower.contains('mocha almond')) {
-      return 'assets/images/classic_coffees/mocha_almond.jpg';
-    } else if (lower.contains('mocha')) {
-      return 'assets/images/classic_coffees/cafe_mocha.jpg';
-    } else if (lower.contains('latte')) {
-      return 'assets/images/classic_coffees/cafe_latte.jpg';
-    }
-    return null;
+  BrewMenuItem get _bestSellerItem {
+    final fallbackMenu = widget.shop.partner == BrewPartner.a
+        ? _defaultDripMenuItems
+        : _defaultMenuItems;
+    final activeMenu = _menuItems.isNotEmpty ? _menuItems : fallbackMenu;
+
+    // The two shops have different signature items. Prefer that item from the
+    // live board, then use the matching local fallback. If an imported board
+    // has been customised and no signature item remains, using its first item
+    // still keeps the promo inside the active shop instead of showing the
+    // other partner's product.
+    final preferred = activeMenu
+        .where(_isFeaturedItemForActiveShop)
+        .firstOrNull;
+    return preferred ?? activeMenu.firstOrNull ?? _fallbackBestSeller;
   }
 
-  BrewMenuItem get _bestSellerItem {
-    return _menuItems.where((i) {
-      final name = (i.name as dynamic)?.toString().toLowerCase() ?? '';
-      return name.contains('avalanche') || name.contains('dirty');
-    }).firstOrNull ??
-    _defaultMenuItems.where((i) {
-      final name = (i.name as dynamic)?.toString().toLowerCase() ?? '';
-      return name.contains('avalanche') || name.contains('dirty');
-    }).firstOrNull ??
-    const BrewMenuItem(
-      id: 'dirty_avalanche',
-      name: 'Dirty Avalanche',
-      category: 'Iced Blended',
-      subCategory: 'Frappe Series',
-      description: 'Bold coffee frappe with rich chocolate and cream',
-      sizePrices: {BrewItemSize.medium: 8000, BrewItemSize.large: 9000},
+  bool _isFeaturedItemForActiveShop(BrewMenuItem item) {
+    final name = item.name.toLowerCase();
+    if (widget.shop.partner == BrewPartner.a) {
+      return item.id == 'drip_ca_phe_sua_da' ||
+          name.contains('cà phê sữa') ||
+          name.contains('vietnamese coffee');
+    }
+    return item.id == 'dirty_avalanche' ||
+        name.contains('avalanche') ||
+        name.contains('dirty');
+  }
+
+  BrewMenuItem get _fallbackBestSeller {
+    if (widget.shop.partner == BrewPartner.a) {
+      return _defaultDripMenuItems.first;
+    }
+    return _defaultMenuItems.firstWhere(
+      (item) => item.id == 'dirty_avalanche',
+      orElse: () => _defaultMenuItems.first,
     );
   }
 
@@ -304,148 +463,6 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
     );
   }
 
-  void _showWriteReviewDialog() {
-    int rating = 5;
-    final textController = TextEditingController();
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xF20F241A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Write a Review',
-                        style: BrewType.displayAt(20).copyWith(
-                          color: BrewColor.cream,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: BrewColor.sageLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'How was your experience at ${widget.shop.displayName}?',
-                    style: BrewType.rowBody.copyWith(
-                      color: BrewColor.sageLight,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(5, (index) {
-                      final star = index + 1;
-                      return IconButton(
-                        iconSize: 34,
-                        onPressed: () {
-                          HapticFeedback.selectionClick();
-                          setModalState(() => rating = star);
-                        },
-                        icon: Icon(
-                          star <= rating
-                              ? Icons.star_rounded
-                              : Icons.star_border_rounded,
-                          color: const Color(0xFFF4C430),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: textController,
-                    maxLines: 3,
-                    style: BrewType.rowBody.copyWith(color: BrewColor.cream),
-                    decoration: InputDecoration(
-                      hintText:
-                          'Share details about your drink, service, or atmosphere...',
-                      hintStyle: BrewType.rowBody.copyWith(
-                        color: BrewColor.cream.withValues(alpha: 0.35),
-                      ),
-                      filled: true,
-                      fillColor: const Color(0x3308170F),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide(
-                          color: BrewColor.cream.withValues(alpha: 0.15),
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(color: Color(0xFF5BA37E)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 48,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3E6953),
-                        foregroundColor: BrewColor.cream,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      onPressed: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.of(ctx).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: const Color(0xFF143825),
-                            content: Text(
-                              'Thank you! Your review has been submitted.',
-                              style: BrewType.rowBody.copyWith(
-                                color: BrewColor.cream,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      child: Text(
-                        'Submit Review',
-                        style: BrewType.title.copyWith(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: BrewColor.cream,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
@@ -453,7 +470,15 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
     final media = MediaQuery.of(context);
     final topPadding = media.padding.top;
     final bottomPadding = math.max(media.padding.bottom, 16.0);
-    final categories = _categoriesFor(_menuItems);
+    final fallbackMenu = widget.shop.partner == BrewPartner.a
+        ? _defaultDripMenuItems
+        : _defaultMenuItems;
+    final activeMenu = _menuLoading
+        ? const <BrewMenuItem>[]
+        : (_menuItems.isNotEmpty ? _menuItems : fallbackMenu);
+    final categories = _menuLoading
+        ? const <_CategoryItem>[]
+        : _categoriesFor(activeMenu);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -828,7 +853,6 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
                         0 => _buildMenuTab(context, categories),
                         1 => _buildAboutTab(context, shop),
                         2 => _buildPhotosTab(context),
-                        3 => _buildReviewsTab(context),
                         _ => _buildMenuTab(context, categories),
                       },
 
@@ -846,48 +870,154 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
   }
 
   // ================= TAB 0: MENU TAB =================
+  Widget _buildMenuLoadingTab() {
+    return _MenuLoadingGrid(
+      title: 'MENU CATEGORIES',
+      itemCount: 6,
+      crossAxisCount: 3,
+      childAspectRatio: 0.80,
+    );
+  }
+
   Widget _buildMenuTab(BuildContext context, List<_CategoryItem> categories) {
+    if (_menuLoading) return _buildMenuLoadingTab();
+    final visibleCategories = categories.length > 6 && !_expandAllCategories
+        ? categories.take(6).toList()
+        : categories;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // MENU CATEGORIES Header
-        Text(
-          'MENU CATEGORIES',
-          style: BrewType.title.copyWith(
-            fontSize: 12,
-            letterSpacing: 1.8,
-            color: BrewColor.sageLight,
-            fontWeight: FontWeight.w700,
-          ),
+        // MENU CATEGORIES Header with View Whole Menu button
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'MENU CATEGORIES',
+              style: BrewType.title.copyWith(
+                fontSize: 12,
+                letterSpacing: 1.8,
+                color: BrewColor.sageLight,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                HapticFeedback.lightImpact();
+                Navigator.of(context).push(
+                  WholeMenuViewerScreen.route(
+                    shop: widget.shop,
+                    counter: widget.counter,
+                    session: widget.session,
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4.5,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0x22D4A373),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: const Color(0x66D4A373),
+                    width: 0.9,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.menu_book_rounded,
+                      size: 12,
+                      color: Color(0xFFD4A373),
+                    ),
+                    const SizedBox(width: 4.5),
+                    Text(
+                      'View whole menu',
+                      style: BrewType.mono.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFFFFE3B3),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 14),
 
-        // 3-Column Category Grid Cards
-        GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: categories.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.80,
+        // 3-Column Category Grid Cards with Progressive Lazy Loading
+        StaggerGroup(
+          itemCount: math.max(1, visibleCategories.length),
+          reveal: true,
+          reduced: MediaQuery.disableAnimationsOf(context),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: visibleCategories.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.80,
+            ),
+            itemBuilder: (context, index) {
+              final cat = visibleCategories[index];
+              return StaggerItem(
+                index: index,
+                child: _CategoryGridCard(
+                  item: cat,
+                  onTap: () => _openCategory(cat.name),
+                ),
+              );
+            },
           ),
-          itemBuilder: (context, index) {
-            final cat = categories[index];
-            return _CategoryGridCard(
-              item: cat,
-              onTap: () => _openCategory(cat.name),
-            );
-          },
         ),
+        if (categories.length > 6) ...[
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                setState(() => _expandAllCategories = !_expandAllCategories);
+              },
+              icon: Icon(
+                _expandAllCategories
+                    ? Icons.keyboard_arrow_up_rounded
+                    : Icons.keyboard_arrow_down_rounded,
+                size: 16,
+                color: const Color(0xFFD4A373),
+              ),
+              label: Text(
+                _expandAllCategories
+                    ? 'Show fewer categories'
+                    : 'Show all ${categories.length} categories (+${categories.length - 6})',
+                style: BrewType.mono.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFFD4A373),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 22),
 
-        // "Try our Best Seller!" Promo Card
-        _BestSellerPromoCard(
-          item: _bestSellerItem,
-          onView: _openBestSeller,
-        ),
+        if (widget.shop.partner == BrewPartner.b ||
+            widget.shop.partner == BrewPartner.a ||
+            _menuItems.any(
+              (item) =>
+                  item.name.toLowerCase().contains('avalanche') ||
+                  item.name.toLowerCase().contains('dirty'),
+            ))
+          _BestSellerPromoCard(item: _bestSellerItem, onView: _openBestSeller),
       ],
     );
   }
@@ -938,7 +1068,8 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Proudly serving the Aurora community since 2023. At ${shop.displayName}, every bean is thoughtfully sourced and roasted to perfection. From our signature handcrafted espresso blends to our freshly shaken fruit refreshers, our baristas pour passion into every cup.',
+                shop.story ??
+                    'Proudly serving the Aurora community since 2023. At ${shop.displayName}, every bean is thoughtfully sourced and roasted to perfection. From our signature handcrafted espresso blends to our freshly shaken fruit refreshers, our baristas pour passion into every cup.',
                 style: BrewType.rowBody.copyWith(
                   fontSize: 13,
                   height: 1.5,
@@ -975,70 +1106,25 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
               _buildInfoRow(
                 Icons.calendar_today_rounded,
                 'Monday – Friday',
-                '7:00 AM – 10:00 PM',
+                shop.weekdayHours ?? '7:00 AM – 10:00 PM',
               ),
               const Divider(color: Color(0x22FFFFFF), height: 18),
               _buildInfoRow(
                 Icons.weekend_rounded,
                 'Saturday – Sunday',
-                '8:00 AM – 11:00 PM',
+                shop.weekendHours ?? '8:00 AM – 11:00 PM',
               ),
               const Divider(color: Color(0x22FFFFFF), height: 18),
               _buildInfoRow(
                 Icons.location_on_rounded,
                 'Address',
-                'Aurora Blvd, Quezon City, Metro Manila',
+                shop.address ?? 'Aurora Blvd, Quezon City, Metro Manila',
               ),
               const Divider(color: Color(0x22FFFFFF), height: 18),
               _buildInfoRow(
                 Icons.phone_rounded,
                 'Contact',
-                '(02) 8123-4567 • hello@quickbrew.ph',
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Amenities Card
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xEB132218),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: BrewColor.cream.withValues(alpha: 0.12),
-              width: 1.0,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Amenities',
-                style: BrewType.displayAt(
-                  17,
-                ).copyWith(fontWeight: FontWeight.w700, color: BrewColor.cream),
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildAmenityChip(Icons.wifi_rounded, 'Free Wi-Fi'),
-                  _buildAmenityChip(Icons.ac_unit_rounded, 'Air Conditioned'),
-                  _buildAmenityChip(Icons.power_rounded, 'Power Outlets'),
-                  _buildAmenityChip(Icons.chair_rounded, 'Cozy Seating'),
-                  _buildAmenityChip(
-                    Icons.delivery_dining_rounded,
-                    'Takeout & Delivery',
-                  ),
-                  _buildAmenityChip(
-                    Icons.pets_rounded,
-                    'Pet Friendly (Outdoor)',
-                  ),
-                ],
+                shop.contact ?? '(02) 8123-4567 • hello@quickbrew.ph',
               ),
             ],
           ),
@@ -1081,39 +1167,11 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
     );
   }
 
-  Widget _buildAmenityChip(IconData icon, String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0x330B2317),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: BrewColor.cream.withValues(alpha: 0.1),
-          width: 0.9,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: const Color(0xFF5BA37E)),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: BrewType.title.copyWith(
-              fontSize: 12,
-              color: BrewColor.cream.withValues(alpha: 0.9),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatItemPrice(BrewMenuItem item) {
     if (item.sizePrices.isNotEmpty) {
       final prices = item.sizePrices.values.toList()..sort();
       if (prices.length >= 2) {
-        return '₱${(prices.first / 100).toStringAsFixed(0)} | ₱${(prices.last / 100).toStringAsFixed(0)}';
+        return '₱${(prices.first / 100).toStringAsFixed(0)}–₱${(prices.last / 100).toStringAsFixed(0)}';
       } else if (prices.isNotEmpty) {
         return '₱${(prices.first / 100).toStringAsFixed(0)}';
       }
@@ -1124,15 +1182,17 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
     return '₱75';
   }
 
-  void _openDrinkWizard(BrewMenuItem item) {
+  void _showMenuItemPreview(BrewMenuItem item) {
     HapticFeedback.lightImpact();
-    Navigator.of(context).push(
-      OrderWizardScreen.route(
-        reduced: MediaQuery.disableAnimationsOf(context),
-        shop: widget.shop,
-        session: widget.session,
-        counter: widget.counter,
+    final (icon, accentColor) = _itemIconAndColor(item);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _MenuItemPreviewSheet(
         item: item,
+        icon: icon,
+        accentColor: accentColor,
       ),
     );
   }
@@ -1165,6 +1225,14 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
 
   // ================= TAB 2: PHOTOS / MENU PICTURES TAB =================
   Widget _buildPhotosTab(BuildContext context) {
+    if (_menuLoading) {
+      return _MenuLoadingGrid(
+        title: 'STORE GALLERY',
+        itemCount: 6,
+        crossAxisCount: 2,
+        childAspectRatio: 0.82,
+      );
+    }
     final allItems = _menuItems.isNotEmpty ? _menuItems : _defaultMenuItems;
     final totalPages = math.max(1, (allItems.length / _photosPageSize).ceil());
     final currentPage = _safePhotosPage.clamp(0, totalPages - 1);
@@ -1348,390 +1416,446 @@ class _StoreLandingScreenState extends State<StoreLandingScreen> {
           const SizedBox(height: 14),
         ],
         // 2-Column Grid of Menu Picture Cards
-        GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: pageItems.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.82,
-          ),
-          itemBuilder: (context, index) {
-            final item = pageItems[index];
-            final (icon, accentColor) = _itemIconAndColor(item);
-            final priceStr = _formatItemPrice(item);
+        StaggerGroup(
+          itemCount: math.max(1, pageItems.length),
+          reveal: true,
+          reduced: MediaQuery.disableAnimationsOf(context),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            itemCount: pageItems.length,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.82,
+            ),
+            itemBuilder: (context, index) {
+              final item = pageItems[index];
+              final (icon, accentColor) = _itemIconAndColor(item);
+              final priceStr = _formatItemPrice(item);
 
-            return InkWell(
-              onTap: () => _openDrinkWizard(item),
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xEB132218),
+              return StaggerItem(
+                index: index,
+                child: InkWell(
+                  onTap: () => _showMenuItemPreview(item),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: BrewColor.cream.withValues(alpha: 0.12),
-                    width: 1.0,
-                  ),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Picture / Illustration area
-                    Expanded(
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: const Color(0x2E102B1D),
-                          borderRadius: BorderRadius.circular(12),
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              accentColor.withValues(alpha: 0.22),
-                              const Color(0x1A091A11),
-                            ],
-                          ),
-                        ),
-                        child: Builder(
-                          builder: (context) {
-                            final imageBytes = item.imageBytes;
-
-                            if (imageBytes != null) {
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.memory(
-                                  imageBytes,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
-                              );
-                            }
-
-                            final fallback = _itemFallbackAsset(item.name);
-                            if (fallback != null) {
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.asset(
-                                  fallback,
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
-                              );
-                            }
-
-                            return Center(
-                              child: Icon(icon, size: 38, color: accentColor),
-                            );
-                          },
-                        ),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xEB132218),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: BrewColor.cream.withValues(alpha: 0.12),
+                        width: 1.0,
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Item Name
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: BrewType.title.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: BrewColor.cream,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    // Description or Subtitle
-                    Text(
-                      item.description ?? item.category ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: BrewType.rowBody.copyWith(
-                        fontSize: 11,
-                        color: BrewColor.sageLight,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Price & Order Pill
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            priceStr,
-                            style: BrewType.mono.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFD4A373),
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0x33487A5E),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: const Color(0x66487A5E),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Text(
-                            'Order',
-                            style: BrewType.mono.copyWith(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: BrewColor.cream,
-                            ),
-                          ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 3),
                         ),
                       ],
                     ),
-                  ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Picture / Illustration area
+                        Expanded(
+                          child: Container(
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0x2E102B1D),
+                              borderRadius: BorderRadius.circular(12),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  accentColor.withValues(alpha: 0.22),
+                                  const Color(0x1A091A11),
+                                ],
+                              ),
+                            ),
+                            child: Builder(
+                              builder: (context) {
+                                final imageBytes = item.imageBytes;
+
+                                if (imageBytes != null) {
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.memory(
+                                      imageBytes,
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                    ),
+                                  );
+                                }
+
+                                return Center(
+                                  child: Icon(
+                                    icon,
+                                    size: 38,
+                                    color: accentColor,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Item Name
+                        Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: BrewType.title.copyWith(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: BrewColor.cream,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        // Description or Subtitle
+                        Text(
+                          item.description ?? item.category ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: BrewType.rowBody.copyWith(
+                            fontSize: 11,
+                            color: BrewColor.sageLight,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        // Price & Order Pill
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                priceStr,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: BrewType.mono.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFFD4A373),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0x33487A5E),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0x66487A5E),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: Text(
+                                'Order',
+                                style: BrewType.mono.copyWith(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: BrewColor.cream,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
         const SizedBox(height: 16),
       ],
     );
   }
+}
 
-  // ================= TAB 3: REVIEWS TAB =================
-  Widget _buildReviewsTab(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Overall Rating Header Card
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xEB132218),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: BrewColor.cream.withValues(alpha: 0.12),
-              width: 1.0,
-            ),
-          ),
-          child: Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '4.9',
-                        style: BrewType.displayAt(38).copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: BrewColor.cream,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '/ 5.0',
-                        style: BrewType.title.copyWith(
-                          fontSize: 14,
-                          color: BrewColor.sageLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: List.generate(
-                      5,
-                      (_) => const Icon(
-                        Icons.star_rounded,
-                        size: 18,
-                        color: Color(0xFFF4C430),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '128 verified customer reviews',
-                    style: BrewType.rowBody.copyWith(
-                      fontSize: 11.5,
-                      color: BrewColor.cream.withValues(alpha: 0.65),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0x33487A5E),
-                  foregroundColor: BrewColor.cream,
-                  elevation: 0,
-                  side: const BorderSide(color: Color(0x66487A5E)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                ),
-                onPressed: _showWriteReviewDialog,
-                icon: const Icon(Icons.rate_review_rounded, size: 16),
-                label: Text(
-                  'Review',
-                  style: BrewType.title.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
+class _MenuLoadingGrid extends StatefulWidget {
+  const _MenuLoadingGrid({
+    required this.title,
+    required this.itemCount,
+    required this.crossAxisCount,
+    required this.childAspectRatio,
+  });
 
-        // Customer Review Cards
-        _buildReviewCard(
-          author: 'Maria Santos',
-          rating: 5,
-          date: '2 days ago',
-          drinkOrdered: 'Dirty Avalanche (L)',
-          comment:
-              'Hands down the best Dirty Avalanche in QC! Perfectly balanced espresso and creamy chocolate frappe. The atmosphere is quiet and lovely.',
-        ),
-        const SizedBox(height: 12),
-        _buildReviewCard(
-          author: 'Alex Tan',
-          rating: 5,
-          date: '1 week ago',
-          drinkOrdered: 'Iced Sea Salt Latte',
-          comment:
-              'Staff is super friendly and the quick ordering flow made my morning rush so easy. Wi-Fi was fast and steady too.',
-        ),
-        const SizedBox(height: 12),
-        _buildReviewCard(
-          author: 'Joshua Reyes',
-          rating: 5,
-          date: '2 weeks ago',
-          drinkOrdered: 'Matcha Green Tea',
-          comment:
-              'Genuine Japanese matcha taste, not overly sweet. Will definitely be a regular here!',
-        ),
-      ],
+  final String title;
+  final int itemCount;
+  final int crossAxisCount;
+  final double childAspectRatio;
+
+  @override
+  State<_MenuLoadingGrid> createState() => _MenuLoadingGridState();
+}
+
+class _MenuLoadingGridState extends State<_MenuLoadingGrid>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmer;
+  bool _reducedMotion = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
     );
   }
 
-  Widget _buildReviewCard({
-    required String author,
-    required int rating,
-    required String date,
-    required String drinkOrdered,
-    required String comment,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xEB132218),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: BrewColor.cream.withValues(alpha: 0.1),
-          width: 1.0,
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reducedMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reducedMotion) {
+      _shimmer.stop();
+    } else if (!_shimmer.isAnimating) {
+      _shimmer.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmer.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _shimmer,
+      builder: (context, child) {
+        final reduced = _reducedMotion;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  widget.title,
+                  style: BrewType.title.copyWith(
+                    fontSize: 12,
+                    letterSpacing: 1.8,
+                    color: BrewColor.sageLight,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      BrewColor.sageLight.withValues(
+                        alpha: reduced ? 0.55 : 0.45 + _pulse(0) * 0.35,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: widget.itemCount,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: widget.crossAxisCount,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: widget.childAspectRatio,
+              ),
+              itemBuilder: (context, index) =>
+                  _buildLoadingCard(index, reduced: reduced),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  double _pulse(int index) {
+    final phase = (_shimmer.value + index * 0.09) % 1.0;
+    return (math.sin(phase * math.pi * 2) + 1) / 2;
+  }
+
+  Widget _buildLoadingCard(int index, {required bool reduced}) {
+    final pulse = reduced ? 0.35 : _pulse(index);
+    return Transform.translate(
+      offset: Offset(0, reduced ? 0 : (1 - pulse) * 1.5),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color.lerp(
+            const Color(0xEB132218),
+            const Color(0xFF234432),
+            pulse * 0.45,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: BrewColor.cream.withValues(alpha: 0.08 + pulse * 0.10),
+          ),
+        ),
+        child: Center(
+          child: Opacity(
+            opacity: 0.35 + pulse * 0.4,
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  BrewColor.sageLight.withValues(alpha: 0.75),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 17,
-                backgroundColor: const Color(0x33487A5E),
+    );
+  }
+}
+
+class _MenuItemPreviewSheet extends StatelessWidget {
+  const _MenuItemPreviewSheet({
+    required this.item,
+    required this.icon,
+    required this.accentColor,
+  });
+
+  final BrewMenuItem item;
+  final IconData icon;
+  final Color accentColor;
+
+  Widget _buildImage() {
+    final bytes = item.imageBytes;
+    if (bytes != null) {
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (context, error, stackTrace) => _buildFallbackIcon(),
+      );
+    }
+    return _buildFallbackIcon();
+  }
+
+  Widget _buildFallbackIcon() {
+    return Center(child: Icon(icon, size: 52, color: accentColor));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+        decoration: const BoxDecoration(
+          color: Color(0xFF132218),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: BrewColor.cream.withValues(alpha: 0.28),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 190,
+              width: double.infinity,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: ColoredBox(
+                  color: const Color(0x2E102B1D),
+                  child: _buildImage(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'ITEM PREVIEW',
+              style: BrewType.mono.copyWith(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.6,
+                color: accentColor,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              item.name,
+              style: BrewType.displayAt(
+                24,
+              ).copyWith(fontWeight: FontWeight.w600, color: BrewColor.cream),
+            ),
+            if (item.description != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                item.description!,
+                style: BrewType.rowBody.copyWith(
+                  fontSize: 13,
+                  height: 1.4,
+                  color: BrewColor.cream.withValues(alpha: 0.72),
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            Text(
+              _previewPrice(item),
+              style: BrewType.mono.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFD4A373),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(context).pop(),
                 child: Text(
-                  author[0],
-                  style: BrewType.title.copyWith(
-                    fontSize: 14,
+                  'Close',
+                  style: BrewType.mono.copyWith(
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: BrewColor.cream,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      author,
-                      style: BrewType.title.copyWith(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: BrewColor.cream,
-                      ),
-                    ),
-                    Text(
-                      date,
-                      style: BrewType.rowBody.copyWith(
-                        fontSize: 11,
-                        color: BrewColor.sageLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < rating ? Icons.star_rounded : Icons.star_border_rounded,
-                    size: 15,
-                    color: const Color(0xFFF4C430),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-            decoration: BoxDecoration(
-              color: const Color(0x2E102B1D),
-              borderRadius: BorderRadius.circular(6),
             ),
-            child: Text(
-              'Ordered: $drinkOrdered',
-              style: BrewType.mono.copyWith(
-                fontSize: 10.5,
-                color: const Color(0xFFD4A373),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            comment,
-            style: BrewType.rowBody.copyWith(
-              fontSize: 12.5,
-              height: 1.4,
-              color: BrewColor.cream.withValues(alpha: 0.85),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  static String _previewPrice(BrewMenuItem item) {
+    if (item.sizePrices.isNotEmpty) {
+      final prices = item.sizePrices.values.toList()..sort();
+      return 'From ₱${(prices.first / 100).toStringAsFixed(0)}';
+    }
+    if (item.priceCents != null) {
+      return '₱${(item.priceCents! / 100).toStringAsFixed(0)}';
+    }
+    return 'Price available in store';
   }
 }
 
@@ -1763,6 +1887,24 @@ class _CategoryGridCard extends StatefulWidget {
 
 class _CategoryGridCardState extends State<_CategoryGridCard> {
   bool _pressed = false;
+
+  Widget _buildFallbackIcon() {
+    return Center(
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0x330C2317),
+          border: Border.all(
+            color: widget.item.accentColor.withValues(alpha: 0.3),
+            width: 1.0,
+          ),
+        ),
+        child: Icon(widget.item.icon, size: 24, color: widget.item.accentColor),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1810,39 +1952,47 @@ class _CategoryGridCardState extends State<_CategoryGridCard> {
                       ],
                     ),
                   ),
-                  child: widget.item.imageBytes == null
-                      ? Center(
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0x330C2317),
-                              border: Border.all(
-                                color: widget.item.accentColor.withValues(
-                                  alpha: 0.3,
-                                ),
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Icon(
-                              widget.item.icon,
-                              size: 24,
-                              color: widget.item.accentColor,
-                            ),
-                          ),
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.memory(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: widget.item.imageBytes != null
+                        ? Image.memory(
                             widget.item.imageBytes!,
                             width: double.infinity,
                             height: double.infinity,
                             fit: BoxFit.cover,
+                            frameBuilder:
+                                (
+                                  context,
+                                  child,
+                                  frame,
+                                  wasSynchronouslyLoaded,
+                                ) {
+                                  if (wasSynchronouslyLoaded || frame != null) {
+                                    return child;
+                                  }
+                                  return Container(
+                                    color: const Color(0x2E102B1D),
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                widget.item.accentColor
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                             errorBuilder: (context, error, stackTrace) =>
-                                const SizedBox.shrink(),
-                          ),
-                        ),
+                                _buildFallbackIcon(),
+                          )
+                        : _buildFallbackIcon(),
+                  ),
                 ),
               ),
               // Category Name Label (using elegant proportional typography with 2-line capacity)
@@ -1870,10 +2020,7 @@ class _CategoryGridCardState extends State<_CategoryGridCard> {
 }
 
 class _BestSellerPromoCard extends StatelessWidget {
-  const _BestSellerPromoCard({
-    this.item,
-    required this.onView,
-  });
+  const _BestSellerPromoCard({this.item, required this.onView});
 
   final BrewMenuItem? item;
   final VoidCallback? onView;
@@ -1890,59 +2037,23 @@ class _BestSellerPromoCard extends StatelessWidget {
       );
     }
 
-    final name = (item?.name ?? '').toLowerCase();
-    String? assetPath;
-    if (name.contains('avalanche') || name.contains('dirty') || name.isEmpty) {
-      assetPath = 'assets/images/dirty_avalanche.jpg';
-    } else if (name.contains('americano')) {
-      assetPath = 'assets/images/classic_coffees/americano.jpg';
-    } else if (name.contains('spanish')) {
-      assetPath = 'assets/images/classic_coffees/spanish_latte.jpg';
-    } else if (name.contains('salted caramel')) {
-      assetPath = 'assets/images/classic_coffees/salted_caramel.jpg';
-    } else if (name.contains('caramel macchiato')) {
-      assetPath = 'assets/images/classic_coffees/caramel_macchiato.jpg';
-    } else if (name.contains('hazelnut')) {
-      assetPath = 'assets/images/classic_coffees/hazelnut_macchiato.jpg';
-    } else if (name.contains('vanilla')) {
-      assetPath = 'assets/images/classic_coffees/vanilla_macchiato.jpg';
-    } else if (name.contains('mocha almond')) {
-      assetPath = 'assets/images/classic_coffees/mocha_almond.jpg';
-    } else if (name.contains('mocha')) {
-      assetPath = 'assets/images/classic_coffees/cafe_mocha.jpg';
-    } else if (name.contains('latte')) {
-      assetPath = 'assets/images/classic_coffees/cafe_latte.jpg';
-    }
-
-    if (assetPath != null) {
-      return Image.asset(
-        assetPath,
-        width: 76,
-        height: 76,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => _buildFallbackBadge(),
-      );
-    }
-
     return _buildFallbackBadge();
   }
 
   Widget _buildFallbackBadge() {
     return const Center(
-      child: Icon(
-        Icons.local_cafe_rounded,
-        size: 38,
-        color: Color(0xFFD4A373),
-      ),
+      child: Icon(Icons.local_cafe_rounded, size: 38, color: Color(0xFFD4A373)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final itemName = item?.name ?? 'Featured drink';
+    final itemDescription =
+        item?.description ?? 'A signature favorite from this store.';
     return Semantics(
       button: true,
-      label:
-          'Try our Best Seller! Dirty Avalanche. Bold coffee. Creamy bliss. View',
+      label: 'Try our Best Seller! $itemName. $itemDescription. View',
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -1981,7 +2092,7 @@ class _BestSellerPromoCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Dirty Avalanche',
+                        itemName,
                         style: BrewType.displayAt(19).copyWith(
                           fontWeight: FontWeight.w600,
                           color: BrewColor.cream,
@@ -1989,7 +2100,7 @@ class _BestSellerPromoCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Bold coffee. Creamy bliss.',
+                        itemDescription,
                         style: BrewType.rowBody.copyWith(
                           fontSize: 12,
                           color: BrewColor.cream.withValues(alpha: 0.65),

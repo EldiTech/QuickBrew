@@ -93,6 +93,8 @@ flutter:
     # The Seven Coffee & Tea board, as transcribed. Bundled rather than
     # fetched so the admin import runs offline — see BrewMenuSeed.
     - assets/menu/
+    - assets/menu/seven_redesigned/
+    - assets/menu/drip_redesigned/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

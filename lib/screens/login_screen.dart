@@ -15,6 +15,7 @@ import '../widgets/brew_field.dart';
 import '../widgets/brew_reveal.dart';
 import '../widgets/cup_mark.dart';
 import '../widgets/stagger.dart';
+import '../widgets/brew_transitions.dart';
 
 /// Where Log in goes.
 ///
@@ -41,7 +42,7 @@ class LoginScreen extends StatefulWidget {
   /// Resolves to null when the session exists, or to the failure to hang on the
   /// form.
   final Future<BrewAuthFailure?> Function(String email, String password)?
-      onSubmit;
+  onSubmit;
 
   final Future<BrewAuthFailure?> Function(String email)? onResetPassword;
   final VoidCallback? onForgotPassword;
@@ -57,20 +58,13 @@ class LoginScreen extends StatefulWidget {
     VoidCallback? onForgotPassword,
     VoidCallback? onCreateAccount,
   }) {
-    final duration = reduced ? Duration.zero : BrewMotion.transit;
-    return PageRouteBuilder<void>(
-      transitionDuration: duration,
-      reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(
+    return brewPageRoute<void>(
+      reduced: reduced,
+      child: LoginScreen(
         onSubmit: onSubmit,
         onResetPassword: onResetPassword,
         onForgotPassword: onForgotPassword,
         onCreateAccount: onCreateAccount,
-      ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
       ),
     );
   }
@@ -195,41 +189,45 @@ class _LoginScreenState extends State<LoginScreen> {
         color: BrewColor.field,
         child: BrewBackground(
           child: StaggerGroup(
-              itemCount: _staggerCount,
-              reveal: true,
-              reduced: reduced,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final padding = EdgeInsets.only(
-                    left: BrewSpace.gutter,
-                    right: BrewSpace.gutter,
-                    top: math.max(media.padding.top, BrewSpace.minInset) +
-                        BrewSpace.headerClearance,
-                    bottom: math.max(
-                          media.padding.bottom,
-                          BrewSpace.bottomGroupInset,
-                        ) +
-                        media.viewInsets.bottom,
-                  );
+            itemCount: _staggerCount,
+            reveal: true,
+            reduced: reduced,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final padding = EdgeInsets.only(
+                  left: BrewSpace.gutter,
+                  right: BrewSpace.gutter,
+                  top:
+                      math.max(media.padding.top, BrewSpace.minInset) +
+                      BrewSpace.headerClearance,
+                  bottom:
+                      math.max(
+                        media.padding.bottom,
+                        BrewSpace.bottomGroupInset,
+                      ) +
+                      media.viewInsets.bottom,
+                );
 
-                  final minHeight =
-                      math.max(0.0, constraints.maxHeight - padding.vertical);
+                final minHeight = math.max(
+                  0.0,
+                  constraints.maxHeight - padding.vertical,
+                );
 
-                  return SingleChildScrollView(
-                    padding: padding,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: minHeight),
-                      child: IntrinsicHeight(
-                        child: AutofillGroup(child: _form(compact)),
-                      ),
+                return SingleChildScrollView(
+                  padding: padding,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: minHeight),
+                    child: IntrinsicHeight(
+                      child: AutofillGroup(child: _form(compact)),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _form(bool compact) {
@@ -242,11 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
           index: 1,
           child: Row(
             children: [
-              Container(
-                width: 18,
-                height: 1.5,
-                color: BrewColor.sageLight,
-              ),
+              Container(width: 18, height: 1.5, color: BrewColor.sageLight),
               const SizedBox(width: 8),
               Text(
                 'GOOD COFFEE. BETTER DAYS.',
@@ -427,7 +421,9 @@ class _LoginScreenState extends State<LoginScreen> {
         child: GestureDetector(
           onTap: () => setState(() => _obscure = !_obscure),
           child: Icon(
-            _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            _obscure
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
             size: 20,
             color: BrewColor.cream.withValues(alpha: 0.75),
           ),
@@ -533,7 +529,10 @@ class _PasswordResetSheetState extends State<_PasswordResetSheet> {
 
   Future<void> _submit() async {
     final email = _email.text.trim();
-    final validation = BrewRules.email(email, ifEmpty: 'Enter your email address.');
+    final validation = BrewRules.email(
+      email,
+      ifEmpty: 'Enter your email address.',
+    );
     if (validation != null) {
       setState(() {
         _error = validation;
@@ -625,7 +624,9 @@ class _PasswordResetSheetState extends State<_PasswordResetSheet> {
               decoration: BoxDecoration(
                 color: BrewColor.sage.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: BrewColor.sageLight.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: BrewColor.sageLight.withValues(alpha: 0.5),
+                ),
               ),
               child: Text(
                 'Reset link sent! Check your inbox to choose a new password.',

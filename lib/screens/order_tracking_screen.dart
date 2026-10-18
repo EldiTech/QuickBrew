@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show Material;
+import 'package:flutter/material.dart' show Material, showModalBottomSheet;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -13,6 +13,7 @@ import '../widgets/brew_sheet.dart';
 import '../widgets/order_track.dart';
 import '../widgets/shop_mark.dart';
 import '../widgets/stagger.dart';
+import '../widgets/brew_transitions.dart';
 
 /// Where Track order leads: one order, full screen, live.
 ///
@@ -62,21 +63,13 @@ class OrderTrackingScreen extends StatefulWidget {
     BrewSession? session,
     BrewCounter? counter,
   }) {
-    final duration = reduced ? Duration.zero : BrewMotion.transit;
-    return PageRouteBuilder<void>(
-      transitionDuration: duration,
-      reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          OrderTrackingScreen(
+    return brewPageRoute<void>(
+      reduced: reduced,
+      child: OrderTrackingScreen(
         order: order,
         shop: shop,
         session: session,
         counter: counter,
-      ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
       ),
     );
   }
@@ -89,6 +82,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
   /// Held for the life of the screen rather than rebuilt in [build] — the
   /// same reasoning the home screen gives for its own subscriptions.
   Stream<BrewOrder?>? _order;
+  bool _cancelling = false;
+  String? _cancelFailure;
 
   @override
   void initState() {
@@ -97,6 +92,39 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     final uid = widget.session?.uid;
     if (counter == null || uid == null) return;
     _order = BrewCounter.latest(counter.order(uid, widget.order.id));
+  }
+
+  Future<void> _cancelOrder(BrewOrder order) async {
+    final counter = widget.counter;
+    final session = widget.session;
+    if (counter == null ||
+        session == null ||
+        order.stage != BrewOrderStage.received ||
+        _cancelling) {
+      return;
+    }
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: BrewColor.field,
+      builder: (context) => const _CancelOrderSheet(),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _cancelling = true;
+      _cancelFailure = null;
+    });
+    final failure = await counter.cancelOrder(
+      uid: session.uid,
+      orderId: order.id,
+    );
+    if (!mounted) return;
+    setState(() {
+      _cancelling = false;
+      _cancelFailure = failure;
+    });
   }
 
   @override
@@ -117,26 +145,31 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
         child: BrewBackground(
           child: StreamBuilder<BrewOrder?>(
             stream: _order,
-          builder: (context, snapshot) {
-            // Falls back to what the card already knew rather than to a
-            // loading state: the reader just tapped this order, so there is
-            // never a moment this screen knows less about it than they do.
-            // A live answer of null would mean the order left this reader's
-            // own list, which nothing in this app does — see the note on
-            // [BrewCounter.order] — so it is read as "not live yet" rather
-            // than as the order having vanished.
-            final order = snapshot.data ?? widget.order;
-            // No subscription at all — no counter, no session — reads the
-            // same as one that failed: either way, nothing is going to move
-            // on this screen after this frame.
-            final stale = _order == null || snapshot.hasError;
-            return _sheet(context, compact: compact, order: order, stale: stale);
-          },
+            builder: (context, snapshot) {
+              // Falls back to what the card already knew rather than to a
+              // loading state: the reader just tapped this order, so there is
+              // never a moment this screen knows less about it than they do.
+              // A live answer of null would mean the order left this reader's
+              // own list, which nothing in this app does — see the note on
+              // [BrewCounter.order] — so it is read as "not live yet" rather
+              // than as the order having vanished.
+              final order = snapshot.data ?? widget.order;
+              // No subscription at all — no counter, no session — reads the
+              // same as one that failed: either way, nothing is going to move
+              // on this screen after this frame.
+              final stale = _order == null || snapshot.hasError;
+              return _sheet(
+                context,
+                compact: compact,
+                order: order,
+                stale: stale,
+              );
+            },
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _sheet(
     BuildContext context, {
@@ -149,6 +182,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
     final estimate = order.estimate;
     final scheduled = order.scheduledFor;
     final rejected = order.stage == BrewOrderStage.rejected;
+    final cancelled = order.stage == BrewOrderStage.cancelled;
+    final canCancel = order.stage == BrewOrderStage.received;
     final now = DateTime.now();
 
     var next = 0;
@@ -181,10 +216,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           child: _Summary(shop: shop, name: name, order: order),
         ),
         const SizedBox(height: BrewSpace.grid * 2),
-        StaggerItem(
-          index: track,
-          child: StageTrack(step: order.step, steps: BrewOrder.steps),
-        ),
+        if (!cancelled)
+          StaggerItem(
+            index: track,
+            child: StageTrack(step: order.step, steps: BrewOrder.steps),
+          ),
         const SizedBox(height: BrewSpace.grid * 2),
         const CardRule(),
         for (final (index, line) in order.items.indexed) ...[
@@ -252,6 +288,24 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
           index: metaSlot,
           child: _Meta(order: order),
         ),
+        if (cancelled) ...[
+          const SizedBox(height: BrewSpace.grid * 2),
+          Text(
+            'This order was cancelled before the shop started preparing it.',
+            style: BrewType.rowBody.copyWith(color: BrewColor.alert),
+          ),
+        ],
+        if (canCancel && widget.counter != null && widget.session != null) ...[
+          const SizedBox(height: BrewSpace.grid * 3),
+          BrewPrimaryButton(
+            label: _cancelling ? 'Cancelling order' : 'Cancel order',
+            onPressed: _cancelling ? null : () => _cancelOrder(order),
+          ),
+          if (_cancelFailure != null) ...[
+            const SizedBox(height: BrewSpace.grid),
+            Text(_cancelFailure!, style: BrewType.fieldError),
+          ],
+        ],
         if (stale) ...[
           const SizedBox(height: BrewSpace.grid * 2),
           // Not staggered and not blocking: the reader already has every fact
@@ -381,7 +435,10 @@ class _Meta extends StatelessWidget {
               children: [
                 Text('PLACED', style: BrewType.mono),
                 const SizedBox(height: 4),
-                Text(BrewOrder.formatWhen(placedAt), style: BrewType.bodyMedium),
+                Text(
+                  BrewOrder.formatWhen(placedAt),
+                  style: BrewType.bodyMedium,
+                ),
               ],
             ),
           ),
@@ -397,6 +454,46 @@ class _Meta extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _CancelOrderSheet extends StatelessWidget {
+  const _CancelOrderSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        left: BrewSpace.gutter,
+        right: BrewSpace.gutter,
+        top: BrewSpace.grid * 3,
+        bottom: media.padding.bottom + BrewSpace.grid * 4,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Cancel this order?', style: BrewType.displayAt(24)),
+          const SizedBox(height: BrewSpace.grid * 2),
+          Text(
+            'You can cancel while the shop still shows the order as received. '
+            'Once preparation starts, cancellation is no longer available here.',
+            style: BrewType.rowBody,
+          ),
+          const SizedBox(height: BrewSpace.grid * 4),
+          BrewPrimaryButton(
+            label: 'Yes, cancel order',
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+          const SizedBox(height: BrewSpace.grid),
+          BrewTextButton(
+            label: 'Keep order',
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+        ],
+      ),
     );
   }
 }

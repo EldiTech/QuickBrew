@@ -76,8 +76,18 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/invites/$(email)).data;
     }
 
+    // Whether the address on the token has been proven to belong to the
+    // caller. Email/password sign-up does not prove it — anyone can create an
+    // account under somebody else's address — so anything granted *because of*
+    // an address (an invite) must wait for this. Without it, whoever signs up
+    // first under an invited admin's email takes the admin role.
+    function emailVerified() {
+      return signedIn() && request.auth.token.get('email_verified', false) == true;
+    }
+
     function matchesInvite(email) {
-      return exists(/databases/$(database)/documents/invites/$(email)) &&
+      return emailVerified() &&
+        exists(/databases/$(database)/documents/invites/$(email)) &&
         inviteData(email).get('used', false) == false &&
         request.resource.data.role == inviteData(email).get('role', '') &&
         request.resource.data.assignedStore ==
@@ -89,12 +99,66 @@ service cloud.firestore {
         request.resource.data.assignedStore == null;
     }
 
+    // The keys BrewAdmin.ensureProfile writes, and no others — so a self-made
+    // profile cannot smuggle in extra fields a later screen might trust.
+    function validProfileKeys(data) {
+      return data.keys().hasOnly(
+        ['uid', 'email', 'name', 'role', 'assignedStore', 'createdAt']);
+    }
+
+    function optionalString(data, key, maxLen) {
+      return !data.keys().hasAny([key]) ||
+        (data[key] is string && data[key].size() <= maxLen);
+    }
+
+    // Exactly the shape BrewCounter.placeOrder writes. The receipt ceiling
+    // mirrors BrewCounter.maxReceiptChars.
+    function validNewOrder(data) {
+      return data.keys().hasOnly([
+          'uid', 'shop', 'items', 'stage', 'totalCents', 'pickupName',
+          'pickupPhone', 'pickupNote', 'paymentMethod', 'receiptBase64',
+          'scheduledFor', 'etaLowMinutes', 'etaHighMinutes', 'placedAt']) &&
+        data.keys().hasAll([
+          'uid', 'shop', 'items', 'stage', 'totalCents', 'pickupName',
+          'pickupPhone', 'paymentMethod', 'placedAt']) &&
+        data.shop in ['coffee-shop-a', 'coffee-shop-b'] &&
+        data.items is list && data.items.size() > 0 && data.items.size() <= 100 &&
+        data.totalCents is int && data.totalCents >= 0 &&
+        data.totalCents <= 10000000 &&
+        data.pickupName is string && data.pickupName.size() <= 100 &&
+        data.pickupPhone is string && data.pickupPhone.size() <= 40 &&
+        data.paymentMethod in ['Full payment', 'Half payment'] &&
+        data.keys().hasAny(['receiptBase64']) &&
+        data.receiptBase64 is string && data.receiptBase64.size() > 0 &&
+        data.receiptBase64.size() <= 512000 &&
+        optionalString(data, 'pickupNote', 500) &&
+        optionalString(data, 'receiptBase64', 512000) &&
+        (!data.keys().hasAny(['scheduledFor']) || data.scheduledFor is timestamp) &&
+        (!data.keys().hasAny(['etaLowMinutes']) || data.etaLowMinutes is int) &&
+        (!data.keys().hasAny(['etaHighMinutes']) || data.etaHighMinutes is int) &&
+        data.placedAt == request.time;
+    }
+
     // Global system state (maintenance mode, lockouts, landing page CMS).
     // Readable publicly so mobile clients and the download landing page know when ordering is paused.
-    // Writable by authenticated administrators and super administrators.
+    //
+    // Super admin only. These documents are not any one shop's: maintenance
+    // locks the app for *both* shops, and web_config drives the public download
+    // page — including the APK link and its QR code. A store admin who could
+    // write here could take the other shop offline or point every visitor's
+    // download at a file of their choosing.
+    //
+    // The APK file name is pinned to a bare `name.apk` for the same reason: the
+    // landing page puts it straight into an href, so a full URL or a
+    // `javascript:` link would turn one bad write into malware distribution or
+    // script running on the public site.
     match /system/{doc} {
       allow read: if true;
-      allow write: if isSuperAdmin() || myRole() == 'admin';
+      allow create, update: if isSuperAdmin() &&
+        (doc != 'web_config' ||
+         request.resource.data.get('apkFileName', 'quickbrew-release.apk')
+           .matches('^[A-Za-z0-9][A-Za-z0-9._-]{0,99}[.]apk$'));
+      allow delete: if isSuperAdmin();
     }
 
     // Partner hours and logos. Any signed-in reader may see both shops. Writes
@@ -124,6 +188,19 @@ service cloud.firestore {
         allow read: if signedIn();
         allow write: if isSuperAdmin() || isAdminFor(shop);
       }
+
+      // Whole menu boards (full laminated board photographs)
+      match /whole_menu/{board} {
+        allow read: if signedIn();
+        allow write: if isSuperAdmin() || isAdminFor(shop);
+      }
+    }
+
+    // Not scoped to a shop, so no store admin owns it — only the super admin
+    // may write. (Per-shop boards live under shops/{shop}/whole_menu above.)
+    match /whole_menus/{board} {
+      allow read: if signedIn();
+      allow write: if isSuperAdmin();
     }
 
     // A reader's own orders, plus the shop's whole queue for whoever runs it.
@@ -151,9 +228,26 @@ service cloud.firestore {
       // place their own order and may not write one in somebody else's name. The
       // stage is pinned to `received` because that is where every order starts and
       // advancing one is the counter's call, not the client's — see BrewOrderStage.
+      //
+      // Every field is checked against what BrewCounter.placeOrder actually
+      // writes. Without this a reader could file an order to a shop that does
+      // not exist, pre-fill a `rejectionReason`, push a negative total, or pad
+      // a document with junk up to Firestore's 1 MiB limit — all of which the
+      // counter's screen would then render as if the app had written it.
       allow create: if signedIn() &&
         request.resource.data.uid == request.auth.uid &&
-        request.resource.data.stage == 'received';
+        request.resource.data.stage == 'received' &&
+        validNewOrder(request.resource.data);
+
+      // A reader may cancel only their own order, and only before the shop
+      // starts preparing it. Cancellation changes no order details, so the
+      // ticket remains available in history without letting a reader rewrite
+      // prices, payment proof, or pickup information.
+      allow update: if signedIn() &&
+        resource.data.uid == request.auth.uid &&
+        resource.data.stage == 'received' &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stage']) &&
+        request.resource.data.stage == 'cancelled';
 
       // Once placed, an order is the shop's to move — the admin side this
       // comment used to say was missing. Only the shop it belongs to (or a
@@ -222,6 +316,7 @@ service cloud.firestore {
       allow create: if request.resource.data.uid == uid &&
         (isSuperAdmin() ||
          (signedIn() && request.auth.uid == uid &&
+          validProfileKeys(request.resource.data) &&
           request.resource.data.email == request.auth.token.email &&
           (isPlainSignup() || matchesInvite(myEmailKey()))));
 
@@ -290,7 +385,8 @@ service cloud.firestore {
       // one batch with the profile create, that failure would take the profile
       // down with it.
       allow update: if isSuperAdmin() ||
-        (myEmailKey() == email &&
+        (emailVerified() &&
+         myEmailKey() == email &&
          resource.data.get('used', false) == false &&
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used']) &&
          request.resource.data.used == true);

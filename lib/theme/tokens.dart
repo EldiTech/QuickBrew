@@ -147,9 +147,7 @@ abstract final class BrewMotion {
   static const extractionCurve = Cubic(0.33, 0, 0.15, 1);
 
   /// 200 + 320 + 1900. The 420ms handoff runs after this, not inside it.
-  static const splashRun = Duration(
-    milliseconds: 200 + 320 + 1900,
-  );
+  static const splashRun = Duration(milliseconds: 200 + 320 + 1900);
 
   /// Where each beat sits inside [splashRun], as a 0..1 fraction.
   static const fadeEnd = 200 / 2420;
@@ -161,6 +159,14 @@ abstract final class BrewMotion {
   /// crossed to; it should cost what crossing to one costs.
   static const transit = Duration(milliseconds: 420);
   static const transitCurve = Cubic(0.22, 1, 0.36, 1);
+
+  /// Customer-flow page entrance: a subtle 2.5% rise under a soft fade.
+  static const pageTransition = Duration(milliseconds: 320);
+  static const pageTransitionCurve = Cubic(0.22, 1, 0.36, 1);
+
+  /// Cross-fading content in the same frame, such as tabs and images.
+  static const tabTransition = Duration(milliseconds: 220);
+  static const imageReveal = Duration(milliseconds: 180);
 
   /// Crossing between two things that occupy the same box: one route fading
   /// over another, one panel replacing another under the nav, one shop's mark

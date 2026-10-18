@@ -1,635 +1,403 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-  <title>QuickBrew — Official Android Release</title>
-  <meta name="description" content="Download the official QuickBrew Android release for Seven Coffee & Tea. Precision coffee ordering, customizable brews, and live extraction tracking.">
-  <meta name="keywords" content="QuickBrew, Coffee Ordering, Seven Coffee and Tea, Android APK, Download Coffee App">
-  
-  <!-- Open Graph -->
-  <meta property="og:title" content="QuickBrew — Precision Coffee Ordering">
-  <meta property="og:description" content="Handcrafted coffee ordering for Seven Coffee & Tea. Download the official release APK.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#102a1d">
+  <meta name="description"
+    content="Download QuickBrew for Android and order ahead from your favorite local coffee shop.">
+  <title>QuickBrew — Coffee, ordered ahead</title>
+
+  <meta property="og:title" content="QuickBrew — Coffee, ordered ahead">
+  <meta property="og:description" content="Browse, customize, order, and follow every cup from queue to counter.">
   <meta property="og:image" content="assets/app_icon.png">
   <meta property="og:type" content="website">
 
-  <!-- Favicon -->
   <link rel="icon" type="image/png" href="assets/app_icon.png">
-
-  <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
 
-  <!-- Navigation & Announcement Container -->
-  <div class="fixed-header-wrapper">
-    <!-- Dynamic Top Announcement Bar (Managed via Admin Console) -->
-    <div class="announcement-bar show" id="announcementBar">
-      <div class="announcement-container">
-        <span class="announcement-badge" id="announcementBadge">NEW RELEASE</span>
-        <span id="announcementText">Official QuickBrew Android APK is now available for direct download.</span>
-      </div>
+  <div class="announcement-bar show" id="announcementBar">
+    <div class="container announcement-inner">
+      <span class="announcement-badge" id="announcementBadge">NEW RELEASE</span>
+      <span id="announcementText">The official QuickBrew Android APK is ready to download.</span>
+      <a href="#download">Get the app <span aria-hidden="true">→</span></a>
     </div>
-
-    <!-- Header -->
-    <header class="site-header">
-      <div class="wrapper nav-container">
-        <a href="#" class="brand-logo">
-          <div class="brand-icon-wrapper">
-            <img src="assets/app_icon.png" alt="QuickBrew Logo">
-          </div>
-          <div class="brand-text">
-            <span class="brand-name">QuickBrew</span>
-            <span class="brand-sub">Seven Coffee &amp; Tea</span>
-          </div>
-        </a>
-
-        <nav class="desktop-nav">
-          <ul class="nav-links">
-            <li><a href="#hero">Overview</a></li>
-            <li><a href="#features">Features</a></li>
-            <li><a href="#specs">Specifications</a></li>
-            <li><a href="#install-guide">Installation</a></li>
-          </ul>
-        </nav>
-
-        <div class="nav-actions">
-          <a href="admin.html" class="btn btn-secondary btn-sm nav-admin-btn" id="adminLoginNavBtn" title="Website Admin Portal">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span>Admin</span>
-          </a>
-          <a href="#download" class="btn btn-primary btn-sm nav-get-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span>Download APK</span>
-          </a>
-          <!-- Mobile Hamburger Toggle -->
-          <button class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle navigation menu" aria-expanded="false">
-            <span class="hamburger-bar"></span>
-            <span class="hamburger-bar"></span>
-            <span class="hamburger-bar"></span>
-          </button>
-        </div>
-      </div>
-    </header>
   </div>
 
-  <!-- Mobile Slide-out Drawer Menu -->
-  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" aria-hidden="true"></div>
-  <aside class="mobile-drawer" id="mobileDrawer" role="dialog" aria-modal="true" aria-label="Navigation Menu">
-    <div class="mobile-drawer-header">
-      <div class="brand-logo">
-        <div class="brand-icon-wrapper">
-          <img src="assets/app_icon.png" alt="QuickBrew Logo">
-        </div>
-        <div class="brand-text">
-          <span class="brand-name">QuickBrew</span>
-          <span class="brand-sub">Seven Coffee &amp; Tea</span>
-        </div>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#hero" aria-label="QuickBrew home">
+        <img class="brand-mark" src="assets/app_icon.png" alt="">
+        <span class="brand-copy">
+          <strong>QuickBrew</strong>
+          <small>Coffee, ordered ahead</small>
+        </span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Primary navigation">
+        <a href="#experience">Experience</a>
+        <a href="#features">Features</a>
+        <a href="#install-guide">Install</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="header-actions">
+        <a class="text-link admin-link" href="admin.html">Admin</a>
+        <a class="button button-dark button-compact" href="#download">
+          <span>Download app</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /></svg>
+        </a>
+        <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-label="Open navigation"
+          aria-expanded="false" aria-controls="mobileDrawer">
+          <span></span><span></span><span></span>
+        </button>
       </div>
-      <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="Close navigation menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+    </div>
+  </header>
+
+  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" aria-hidden="true"></div>
+  <aside class="mobile-drawer" id="mobileDrawer" aria-label="Mobile navigation">
+    <div class="drawer-header">
+      <a class="brand" href="#hero">
+        <img class="brand-mark" src="assets/app_icon.png" alt="">
+        <span class="brand-copy"><strong>QuickBrew</strong><small id="mobileDrawerVersion">Official release · v1.0.0</small></span>
+      </a>
+      <button class="drawer-close" id="mobileDrawerClose" type="button" aria-label="Close navigation">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></svg>
       </button>
     </div>
-
-    <div class="mobile-drawer-body">
-      <div class="mobile-drawer-badge">
-        <span class="badge-dot"></span>
-        <span id="mobileDrawerVersion">Official Release • v1.0.0</span>
-      </div>
-
-      <ul class="mobile-nav-links">
-        <li>
-          <a href="#hero" class="mobile-nav-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-              <polyline points="2 17 12 22 22 17"></polyline>
-              <polyline points="2 12 12 17 22 12"></polyline>
-            </svg>
-            <span>Overview</span>
-          </a>
-        </li>
-        <li>
-          <a href="#download" class="mobile-nav-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span>Download APK</span>
-          </a>
-        </li>
-        <li>
-          <a href="#features" class="mobile-nav-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
-            <span>Application Features</span>
-          </a>
-        </li>
-        <li>
-          <a href="#install-guide" class="mobile-nav-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <span>Installation Guide</span>
-          </a>
-        </li>
-        <li>
-          <a href="#specs" class="mobile-nav-link">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-            <span>Technical Specs</span>
-          </a>
-        </li>
-        <li>
-          <a href="admin.html" class="mobile-nav-link mobile-nav-admin">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-            <span>Admin Console</span>
-          </a>
-        </li>
-      </ul>
-
-      <div class="mobile-drawer-actions">
-        <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="btn btn-primary btn-download mobile-drawer-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span>Download APK (55.1 MB)</span>
-        </a>
-        <a href="admin.html" class="btn btn-secondary mobile-drawer-btn">
-          <span>Admin Portal</span>
-        </a>
-      </div>
-    </div>
-
-    <div class="mobile-drawer-footer">
-      <span>Android 6.0+ • Universal ARM64</span>
-      <span class="drawer-dot">•</span>
-      <span>SHA-256 Verified</span>
+    <nav class="drawer-nav" aria-label="Mobile navigation links">
+      <a href="#experience"><span>01</span> Experience</a>
+      <a href="#features"><span>02</span> Features</a>
+      <a href="#download"><span>03</span> Download</a>
+      <a href="#install-guide"><span>04</span> Installation</a>
+      <a href="#faq"><span>05</span> FAQ</a>
+    </nav>
+    <div class="drawer-footer">
+      <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="button button-accent btn-download">
+        Download APK <span aria-hidden="true">↓</span>
+      </a>
+      <a href="admin.html" class="drawer-admin">Open admin portal</a>
     </div>
   </aside>
 
-  <main>
-    <!-- Hero Section -->
-    <section class="hero-section wrapper" id="hero">
-      <div class="hero-text-content">
-        <div class="badge-tag">
-          <span class="badge-dot"></span>
-          <span id="heroVersionTag">Official Release • v1.0.0 Stable</span>
-        </div>
+  <main id="mainContent">
+    <section class="hero" id="hero">
+      <div class="hero-grain" aria-hidden="true"></div>
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <div class="release-pill">
+            <span class="status-dot"></span>
+            <span id="heroVersionTag">Official release · v1.0.0 Stable</span>
+          </div>
+          <h1 id="mainHeroHeadline">Craft coffee,<br>ordered in seconds.</h1>
+          <p id="mainHeroSubtitle">Browse the full menu, tailor every detail, and follow your order from the first tap
+            to the counter—all from one thoughtfully designed app.</p>
 
-        <h1 class="hero-headline" id="mainHeroHeadline">
-          Precision Coffee Ordering, <br>
-          <span class="highlight">Engineered for Speed.</span>
-        </h1>
-
-        <p class="hero-description" id="mainHeroSubtitle">
-          The definitive specialty coffee companion for Seven Coffee &amp; Tea. Browse 116 curated artisanal recipes, custom-dial your milk and roast profile, and track your brew from extraction to counter in real time.
-        </p>
-
-        <div class="hero-actions-container">
-          <div class="hero-cta-group">
-            <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="btn btn-primary btn-download btn-download-hero" id="heroDownloadBtn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
+          <div class="hero-actions">
+            <a href="quickbrew-release.apk" download="quickbrew-release.apk"
+              class="button button-accent button-large btn-download" id="heroDownloadBtn">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /></svg>
               <span id="heroCtaLabel">Download APK (v1.0.0)</span>
             </a>
-
-            <a href="#install-guide" class="btn btn-secondary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-              <span>Installation Guide</span>
-            </a>
+            <a class="button button-ghost button-large" href="#experience">See how it works</a>
           </div>
 
-          <div class="download-meta-strip">
-            <div class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                <line x1="12" y1="18" x2="12.01" y2="18"></line>
-              </svg>
-              <span id="heroMinAndroid">Android 6.0+</span>
+          <div class="hero-meta" role="group" aria-label="Application details">
+            <span id="heroMinAndroid">Android 7.0+</span>
+            <span class="meta-divider"></span>
+            <span id="heroApkSize">APK size: 59.2 MB</span>
+            <span class="meta-divider"></span>
+            <span>Direct install</span>
+          </div>
+        </div>
+
+        <div class="hero-visual" role="img" aria-label="QuickBrew application preview">
+          <div class="hero-photo-card">
+            <img src="assets/hero_cup.jpg" alt="Fresh latte served in a dark green cup">
+            <div class="photo-label">
+              <span>Made to order</span>
+              <strong>Every cup, your way.</strong>
             </div>
-            <span class="divider-dot"></span>
-            <div class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-              </svg>
-              <span id="heroApkSize">APK Size: 55.1 MB</span>
+          </div>
+
+          <div class="app-preview-card">
+            <div class="preview-topbar">
+              <span>9:41</span>
+              <span class="preview-island"></span>
+              <span>● ●</span>
             </div>
-            <span class="divider-dot"></span>
-            <div class="meta-item">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                <polyline points="9 12 11 14 15 10"></polyline>
-              </svg>
-              <span>Verified Build</span>
+            <div class="preview-greeting">
+              <span>Good morning</span>
+              <strong>What are we brewing?</strong>
             </div>
+            <div class="preview-store">
+              <div class="preview-store-icon">7</div>
+              <div><small>Ordering from</small><strong>Seven Coffee &amp; Tea</strong></div>
+              <span>›</span>
+            </div>
+            <div class="preview-art">
+              <img src="assets/hero_cup.jpg" alt="">
+              <span>Barista's pick</span>
+            </div>
+            <div class="preview-menu-label"><strong>Popular today</strong><span>See all</span></div>
+            <div class="preview-drink-row">
+              <div class="drink-thumb"><img src="assets/hero_cup.jpg" alt=""></div>
+              <div><strong id="mockupDrink1Title">Caramel Cloud Macchiato</strong><small>Espresso craft</small></div>
+              <b id="mockupDrink1Price">₱145</b>
+            </div>
+            <div class="preview-drink-row">
+              <div class="drink-thumb drink-thumb-alt"><img src="assets/hero_cup.jpg" alt=""></div>
+              <div><strong id="mockupDrink2Title">Matcha Berry Cold Foam</strong><small>Artisanal tea</small></div>
+              <b id="mockupDrink2Price">₱160</b>
+            </div>
+            <div class="preview-tabbar"><span>⌂<small>Home</small></span><span>♡<small>Saved</small></span><span>◎<small>Orders</small></span></div>
+          </div>
+
+          <div class="floating-order-card">
+            <span class="floating-icon">✓</span>
+            <div><small>Order confirmed</small><strong>Ready in the queue</strong></div>
           </div>
         </div>
       </div>
 
-      <!-- Hero Visual Phone Frame (Anchored Architectural Device Showcase) -->
-      <div class="hero-visual-wrapper">
-        <div class="phone-mockup-frame">
-          <div class="phone-speaker-grille"></div>
-          <div class="phone-island"></div>
-          
-          <div class="phone-screen">
-            <div class="app-header-bar">
-              <span class="app-brand-title">QuickBrew</span>
-              <span class="app-shop-pill">Seven Coffee</span>
-            </div>
+      <div class="container hero-trust-row">
+        <span>Built with Flutter</span>
+        <span>Real-time order updates</span>
+        <span>Secure Firebase sign-in</span>
+        <span>Direct local download</span>
+      </div>
+    </section>
 
-            <!-- In-App Hero Coffee Visual -->
-            <div class="app-hero-art">
-              <img src="assets/hero_cup.jpg" alt="Artisanal Flat White Coffee">
-            </div>
+    <section class="experience section" id="experience">
+      <div class="container">
+        <div class="section-heading split-heading">
+          <div>
+            <span class="eyebrow">THE QUICKBREW EXPERIENCE</span>
+            <h2>Your usual, without<br>the usual wait.</h2>
+          </div>
+          <p>QuickBrew brings the whole counter journey to your phone. Pick your shop, build your drink, and know exactly
+            where your order is before you arrive.</p>
+        </div>
 
-            <!-- Simulated Live Order Tracker Card -->
-            <div class="app-order-status-card">
-              <div class="app-status-badge">
-                <span class="status-pulse-dot"></span>
-                <span>Brewing • Barista on Duty</span>
-              </div>
-              <div class="app-order-name">Spanish Latte (Double)</div>
-              <div class="app-order-meta">Oat Milk • Less Sweet • Ice Cold</div>
-              <div class="app-progress-bar">
-                <div class="app-progress-fill"></div>
-              </div>
+        <div class="journey-grid">
+          <article class="journey-card journey-card-featured">
+            <span class="step-number">01</span>
+            <div class="journey-copy">
+              <span class="card-kicker">DISCOVER</span>
+              <h3>Start with the shop that fits your mood.</h3>
+              <p>Move between participating storefronts and browse their own menus, availability, and signature drinks.</p>
             </div>
-
-            <!-- Featured Menu Teaser -->
-            <div class="app-featured-menu">
-              <div class="app-drink-item">
-                <div>
-                  <div class="app-drink-title" id="mockupDrink1Title">Caramel Cloud Macchiato</div>
-                  <div class="app-drink-type">Espresso Craft</div>
-                </div>
-                <div class="app-drink-price" id="mockupDrink1Price">₱145</div>
-              </div>
-
-              <div class="app-drink-item">
-                <div>
-                  <div class="app-drink-title" id="mockupDrink2Title">Matcha Berry Cold Foam</div>
-                  <div class="app-drink-type">Artisanal Tea</div>
-                </div>
-                <div class="app-drink-price" id="mockupDrink2Price">₱160</div>
-              </div>
+            <div class="store-switcher" aria-hidden="true">
+              <div class="store-option active"><b>7</b><span><strong>Seven Coffee</strong><small>Open for orders</small></span><i>✓</i></div>
+              <div class="store-option"><b>D</b><span><strong>Drip &amp; Co.</strong><small>Browse the menu</small></span><i>›</i></div>
             </div>
+          </article>
+
+          <article class="journey-card">
+            <span class="step-number">02</span>
+            <div class="journey-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M7 3v8m10-8v8M4 17h16m-5-4v8M9 13v8" /></svg>
+            </div>
+            <span class="card-kicker">PERSONALIZE</span>
+            <h3>Dial in every detail.</h3>
+            <p>Choose size, sweetness, milk, espresso shots, toppings, and extras before adding a drink to your order.</p>
+          </article>
+
+          <article class="journey-card journey-card-dark">
+            <span class="step-number">03</span>
+            <div class="journey-icon">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            </div>
+            <span class="card-kicker">TRACK</span>
+            <h3>Follow the brew, live.</h3>
+            <p>See your order progress from confirmation through preparation to counter pickup.</p>
+            <div class="mini-progress" aria-hidden="true"><span class="done"></span><span class="active"></span><span></span><span></span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature-showcase section" id="features">
+      <div class="container showcase-grid">
+        <div class="showcase-media">
+          <div class="showcase-image-wrap">
+            <img src="assets/hero_cup.jpg" alt="A fresh latte on the coffee bar">
+            <div class="showcase-quote">“Coffee should feel personal before the first sip.”</div>
+          </div>
+        </div>
+
+        <div class="showcase-copy">
+          <span class="eyebrow">DESIGNED AROUND YOUR ORDER</span>
+          <h2>Less friction.<br>More coffee.</h2>
+          <p class="showcase-intro">Every screen is focused on helping you decide quickly, customize confidently, and
+            keep track of what matters.</p>
+
+          <div class="feature-list">
+            <article>
+              <span>01</span>
+              <div><h3>A complete menu in your pocket</h3><p>Explore 116 drinks across coffee, tea, milk, blended, and seasonal categories.</p></div>
+            </article>
+            <article>
+              <span>02</span>
+              <div><h3>Favorites that stay close</h3><p>Save go-to drinks and return to them when the next craving lands.</p></div>
+            </article>
+            <article>
+              <span>03</span>
+              <div><h3>A clear order history</h3><p>See active and previous orders without calling the counter for an update.</p></div>
+            </article>
+            <article>
+              <span>04</span>
+              <div><h3>Payment that fits the shop</h3><p>Use the payment options and QR details provided for your selected location.</p></div>
+            </article>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Bento Grid Application Features -->
-    <section class="features-section wrapper" id="features">
-      <div class="section-head">
-        <span class="section-label">APPLICATION ARCHITECTURE</span>
-        <h2 class="section-title">Designed with Craft and Intention</h2>
-        <p class="section-subtitle">
-          Engineered natively with Flutter for instant responsiveness, tactile feedback, and real-time ledger synchronization.
-        </p>
-      </div>
+    <section class="download-section section" id="download">
+      <div class="container">
+        <div class="download-panel">
+          <div class="download-copy">
+            <span class="eyebrow eyebrow-light">DIRECT ANDROID DOWNLOAD</span>
+            <h2>Your next cup is<br>one install away.</h2>
+            <p>Download the official Android package directly from QuickBrew. No sign-up on this website and no app-store detour.</p>
 
-      <div class="bento-grid">
-        <!-- Feature 1 -->
-        <div class="bento-card">
-          <div class="bento-icon-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
-              <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-              <line x1="6" y1="1" x2="6" y2="4"></line>
-              <line x1="10" y1="1" x2="10" y2="4"></line>
-              <line x1="14" y1="1" x2="14" y2="4"></line>
-            </svg>
-          </div>
-          <h3 class="bento-title">116 Curated Brews</h3>
-          <p class="bento-desc">
-            Explore the authentic catalog from Seven Coffee &amp; Tea: espresso bars, handcrafted pour-overs, iced cloud teas, and seasonal roasts.
-          </p>
-        </div>
+            <div class="release-details">
+              <div><small>Version</small><strong>1.0.0 <span>Build 1</span></strong></div>
+              <div><small>Package</small><strong>com.tip.quickbrew</strong></div>
+              <div><small>Compatibility</small><strong>Android 7.0+</strong></div>
+              <div><small>Architecture</small><strong>Universal APK</strong></div>
+            </div>
 
-        <!-- Feature 2 -->
-        <div class="bento-card">
-          <div class="bento-icon-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" y1="21" x2="4" y2="14"></line>
-              <line x1="4" y1="10" x2="4" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12" y2="3"></line>
-              <line x1="20" y1="21" x2="20" y2="16"></line>
-              <line x1="20" y1="12" x2="20" y2="3"></line>
-              <line x1="1" y1="14" x2="7" y2="14"></line>
-              <line x1="9" y1="8" x2="15" y2="8"></line>
-              <line x1="17" y1="16" x2="23" y2="16"></line>
-            </svg>
-          </div>
-          <h3 class="bento-title">Precision Customizer</h3>
-          <p class="bento-desc">
-            Configure espresso shot count, choose oat or almond milk, fine-tune sweetness ratios, and select foam toppings down to exact pumps.
-          </p>
-        </div>
+            <div class="download-actions">
+              <a href="quickbrew-release.apk" download="quickbrew-release.apk"
+                class="button button-accent button-large btn-download" id="hubDownloadBtn">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /></svg>
+                Download APK · 59.2 MB
+              </a>
+              <a href="#install-guide" class="button button-outline-light button-large">Installation guide</a>
+            </div>
 
-        <!-- Feature 3 -->
-        <div class="bento-card">
-          <div class="bento-icon-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="10" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
+            <div class="checksum-card" id="specs">
+              <div><small>SHA-256 checksum</small><code class="checksum-hash" id="checksumHash">4EE8E3A3524830EEAC4C261D3D35F048A7D6F1519FDD95C4BCA0D4E91342CDB2</code></div>
+              <button type="button" id="copyChecksumBtn" aria-label="Copy SHA-256 checksum">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></svg>
+                <span>Copy</span>
+              </button>
+            </div>
           </div>
-          <h3 class="bento-title">Real-Time Ledger Tracking</h3>
-          <p class="bento-desc">
-            Watch your order progress through Queued, Tamp &amp; Extract, Steaming, and Ready for Counter Pickup with zero manual refreshes.
-          </p>
-        </div>
 
-        <!-- Feature 4 -->
-        <div class="bento-card">
-          <div class="bento-icon-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
+          <div class="download-qr-card">
+            <div class="qr-mobile-banner" id="qrMobileBanner">
+              <strong>On your Android phone?</strong>
+              <span>Use the download button—no QR scan needed.</span>
+            </div>
+            <div class="qr-code-shell">
+              <div class="qr-corners" aria-hidden="true"></div>
+              <div id="qrCodeContainer" class="qr-code"></div>
+            </div>
+            <strong id="qrTitleText">Scan to download</strong>
+            <p id="qrDescText">Point your Android camera at the code to open the official APK.</p>
+            <div class="secure-download"><span>✓</span> Signed and checksum verified</div>
           </div>
-          <h3 class="bento-title">Dual Branch Integration</h3>
-          <p class="bento-desc">
-            Seamlessly select between branch locations with live inventory checks, branch-specific add-ons, and real-time operational status.
-          </p>
-        </div>
-
-        <!-- Feature 5 -->
-        <div class="bento-card">
-          <div class="bento-icon-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-              <line x1="2" y1="10" x2="22" y2="10"></line>
-            </svg>
-          </div>
-          <h3 class="bento-title">Direct QR Payments</h3>
-          <p class="bento-desc">
-            Native tap-to-save QR for GCash, Maya, and InstaPay transfers, routing payment receipts directly into your local device gallery.
-          </p>
-        </div>
-
-        <!-- Feature 6 -->
-        <div class="bento-card">
-          <div class="bento-icon-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-            </svg>
-          </div>
-          <h3 class="bento-title">Telemetry-Free Security</h3>
-          <p class="bento-desc">
-            Protected by Cloud Firestore security rules, Firebase Authentication, and completely free of third-party tracker SDKs.
-          </p>
         </div>
       </div>
     </section>
 
-    <!-- Direct Download Hub & Verification -->
-    <section class="download-hub-section wrapper" id="download">
-      <div class="hub-card-container">
-        <div class="hub-info-col">
-          <span class="badge-tag">DIRECT INSTALLATION</span>
-          <h2 class="hub-info-title">Download QuickBrew for Android</h2>
-          <p class="hub-info-desc">
-            Get the full production release build directly on your Android phone or tablet. Fast, uncompressed assets, pre-connected to Seven Coffee &amp; Tea branches.
-          </p>
-
-          <div class="specs-grid">
-            <div class="spec-box">
-              <div class="spec-label">Version</div>
-              <div class="spec-val">1.0.0 (Build 1)</div>
-            </div>
-            <div class="spec-box">
-              <div class="spec-label">Package Name</div>
-              <div class="spec-val">com.tip.quickbrew</div>
-            </div>
-            <div class="spec-box">
-              <div class="spec-label">Target Architecture</div>
-              <div class="spec-val">Universal / ARM64</div>
-            </div>
-            <div class="spec-box">
-              <div class="spec-label">OS Minimum</div>
-              <div class="spec-val">Android 6.0 (Marshmallow+)</div>
-            </div>
-          </div>
-
-          <div class="hub-actions">
-            <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="btn btn-primary btn-download" id="hubDownloadBtn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-              </svg>
-              <span>Download APK File</span>
-            </a>
-            <a href="#install-guide" class="btn btn-secondary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-              <span>View Instructions</span>
-            </a>
-          </div>
+    <section class="install-section section" id="install-guide">
+      <div class="container">
+        <div class="section-heading centered-heading">
+          <span class="eyebrow">INSTALL WITH CONFIDENCE</span>
+          <h2>From download to first order<br>in four clear steps.</h2>
+          <p>Android may ask for permission because QuickBrew is installed directly rather than through an app store.</p>
         </div>
 
-        <!-- QR Code Module -->
-        <div class="qr-box-container">
-          <div class="qr-mobile-banner" id="qrMobileBanner">
-            <div class="qr-mobile-icon-box">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-                <line x1="12" y1="18" x2="12.01" y2="18"></line>
-              </svg>
-            </div>
-            <div class="qr-mobile-text">
-              <strong>Browsing on mobile?</strong>
-              <span>Tap the download button above to install directly to this phone.</span>
-            </div>
-          </div>
-          <div class="qr-canvas-wrapper" id="qrCodeContainer">
-            <!-- Rendered by app.js -->
-          </div>
-          <div class="qr-title" id="qrTitleText">Scan with Device Camera</div>
-          <div class="qr-desc" id="qrDescText">Point your secondary device camera to download the APK package directly.</div>
+        <ol class="install-steps">
+          <li><span>01</span><div class="install-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14" /></svg></div><h3>Download</h3><p>Tap the APK button and wait for the package to finish.</p></li>
+          <li><span>02</span><div class="install-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z" /><path d="M14 3v5h5" /></svg></div><h3>Open the file</h3><p>Use the download notification or your device’s Downloads folder.</p></li>
+          <li><span>03</span><div class="install-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></svg></div><h3>Allow this source</h3><p>If Android asks, allow installs from your browser or file manager.</p></li>
+          <li><span>04</span><div class="install-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></div><h3>Install &amp; open</h3><p>Confirm the install, launch QuickBrew, and choose your shop.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="faq-section section" id="faq">
+      <div class="container faq-grid">
+        <div class="faq-heading">
+          <span class="eyebrow">GOOD TO KNOW</span>
+          <h2>A few answers<br>before you install.</h2>
+          <p>Need more help? The installation guide above covers the complete direct-download process.</p>
+        </div>
+        <div class="faq-list">
+          <details open>
+            <summary>Is this the official QuickBrew download?<span>+</span></summary>
+            <p>Yes. The APK on this page is the release package published for QuickBrew. You can compare its SHA-256 checksum with the value in the download section.</p>
+          </details>
+          <details>
+            <summary>Why does Android mention unknown apps?<span>+</span></summary>
+            <p>Android shows that message for any app installed outside the Play Store. Allow the browser or file manager you used for this download, then continue the installation.</p>
+          </details>
+          <details>
+            <summary>Which Android versions are supported?<span>+</span></summary>
+            <p>This release supports Android 7.0 and newer on ARMv7, ARM64, and x64 Android devices.</p>
+          </details>
+          <details>
+            <summary>How do I update QuickBrew later?<span>+</span></summary>
+            <p>Return to this page when a new release is announced, download the latest APK, and install it over your current version.</p>
+          </details>
         </div>
       </div>
     </section>
 
-    <!-- Installation Stepper -->
-    <section class="guide-section wrapper" id="install-guide">
-      <div class="section-head">
-        <span class="section-label">INSTALLATION GUIDE</span>
-        <h2 class="section-title">Four Steps to Sideload</h2>
-        <p class="section-subtitle">
-          Direct APK installation on modern Android requires less than thirty seconds:
-        </p>
-      </div>
-
-      <div class="steps-row">
-        <div class="step-card">
-          <div class="step-number">01</div>
-          <div class="step-content">
-            <h4 class="step-card-title">Download Package</h4>
-            <p class="step-card-desc">
-              Tap the "Download APK" button above or scan the QR code using your Android camera.
-            </p>
-          </div>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">02</div>
-          <div class="step-content">
-            <h4 class="step-card-title">Open the File</h4>
-            <p class="step-card-desc">
-              When the download completes, tap the notification prompt or navigate to your device's <em>Downloads</em> folder.
-            </p>
-          </div>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">03</div>
-          <div class="step-content">
-            <h4 class="step-card-title">Allow Unknown Apps</h4>
-            <p class="step-card-desc">
-              If prompted by Android security, open <em>Settings</em> and enable <em>"Allow from this source"</em>.
-            </p>
-          </div>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">04</div>
-          <div class="step-content">
-            <h4 class="step-card-title">Launch QuickBrew</h4>
-            <p class="step-card-desc">
-              Tap <em>Install</em>, then <em>Open</em>. Your artisanal coffee companion is ready to configure your first cup.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Checksum Panel for Technical Verification -->
-      <div class="checksum-panel" id="specs">
-        <div class="checksum-content">
-          <span class="checksum-label">SHA-256 Checksum:</span>
-          <code class="checksum-hash" id="checksumHash">CFAD5848B2287D5BE537E88DB1FE04A1AF2B64D8AD1595DDF19C3059F6E75E9B</code>
-        </div>
-        <button class="btn-copy" id="copyChecksumBtn" aria-label="Copy SHA-256 Checksum">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-          </svg>
-          <span>COPY CHECKSUM</span>
-        </button>
+    <section class="final-cta">
+      <div class="container final-cta-inner">
+        <div><span class="eyebrow">READY WHEN YOU ARE</span><h2>Skip the line.<br>Keep the ritual.</h2></div>
+        <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="button button-accent button-large btn-download">
+          Download QuickBrew <span aria-hidden="true">↓</span>
+        </a>
       </div>
     </section>
   </main>
 
-  <!-- Sticky Mobile Bottom Download Bar -->
-  <div class="mobile-bottom-bar" id="mobileBottomBar" aria-label="Quick download bar">
-    <div class="bottom-bar-inner">
-      <div class="bottom-bar-info">
-        <img src="assets/app_icon.png" alt="QuickBrew Icon" class="bottom-bar-icon">
-        <div class="bottom-bar-text">
-          <span class="bottom-bar-title">QuickBrew APK</span>
-          <span class="bottom-bar-sub">v1.0.0 • 55.1 MB</span>
-        </div>
-      </div>
-      <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="btn btn-primary btn-sm btn-download bottom-bar-btn">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        <span>Install APK</span>
-      </a>
+  <section class="mobile-bottom-bar" id="mobileBottomBar" aria-label="Quick download bar">
+    <div class="mobile-bottom-inner">
+      <img src="assets/app_icon.png" alt="">
+      <div><strong>QuickBrew</strong><span>v1.0.0 · 59.2 MB</span></div>
+      <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="button button-accent btn-download">Install</a>
     </div>
-  </div>
+  </section>
 
-  <!-- Footer -->
   <footer class="site-footer">
-    <div class="wrapper">
-      <div class="footer-top">
-        <div class="brand-logo">
-          <div class="brand-icon-wrapper">
-            <img src="assets/app_icon.png" alt="QuickBrew Logo">
-          </div>
-          <div class="brand-text">
-            <span class="brand-name">QuickBrew</span>
-            <span class="brand-sub">Seven Coffee &amp; Tea</span>
-          </div>
-        </div>
-
-        <div class="nav-actions">
-          <a href="admin.html" class="btn btn-secondary btn-sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            <span>Admin Console</span>
-          </a>
-          <a href="quickbrew-release.apk" download="quickbrew-release.apk" class="btn btn-primary btn-sm btn-download">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span>Download Release</span>
-          </a>
-        </div>
-      </div>
-
-      <div class="footer-bottom">
-        <p>&copy; 2026 QuickBrew. Seven Coffee &amp; Tea. All rights reserved.</p>
-        <p>Compiled natively with Flutter 3.47 &amp; Dart 3.12 for Android.</p>
-      </div>
+    <div class="container footer-main">
+      <a class="brand brand-light" href="#hero">
+        <img class="brand-mark" src="assets/app_icon.png" alt="">
+        <span class="brand-copy"><strong>QuickBrew</strong><small>Coffee, ordered ahead</small></span>
+      </a>
+      <p>A direct Android ordering experience for local coffee, made with Flutter and Firebase.</p>
+      <div class="footer-links"><a href="#features">Features</a><a href="#install-guide">Install</a><a href="admin.html">Admin portal</a></div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© 2026 QuickBrew. All rights reserved.</span>
+      <span>Flutter 3.47 · Android 7.0+</span>
     </div>
   </footer>
 
-  <!-- Toast Notification Container -->
-  <div class="toast-notice" id="toast"></div>
+  <div class="toast-notice" id="toast" role="status" aria-live="polite"></div>
 
-  <!-- Firebase App & Firestore Compat for Live CMS Sync -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
-
-  <!-- QR Code Generator -->
   <script src="assets/qrcode.min.js"></script>
   <script src="assets/app.js"></script>
 </body>
+
 </html>

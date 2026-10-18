@@ -192,7 +192,8 @@ void main() {
         find.text('Handcrafted coffee, tea and signature drinks'),
         findsOneWidget,
       );
-      expect(find.text('View menu →'), findsNWidgets(2));
+      expect(find.text('View menu'), findsNWidgets(2));
+      expect(find.text('View whole menu'), findsNWidgets(2));
       expect(find.text('OPEN'), findsNWidgets(2));
 
       // Equal billing is a measurement, not an intention: same width, same
@@ -264,7 +265,7 @@ void main() {
       // Not "Checking hours": nothing is being checked, so saying so would be a
       // spinner written out in words.
       expect(find.text('HOURS UNAVAILABLE'), findsNWidgets(2));
-      expect(find.text('View menu →'), findsNWidgets(2));
+      expect(find.text('View menu'), findsNWidgets(2));
     });
 
     testWidgets('a shop closing arrives without a reload', (tester) async {

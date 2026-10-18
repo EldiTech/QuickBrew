@@ -21,6 +21,7 @@ void main() {
 
   Future<void> pumpStore(
     WidgetTester tester, {
+    BrewPartner partner = BrewPartner.a,
     BrewShopStatus status = BrewShopStatus.open,
   }) async {
     tester.view.devicePixelRatio = 1;
@@ -30,7 +31,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: StoreLandingScreen(
-          shop: BrewShop(partner: BrewPartner.a, status: status),
+          shop: BrewShop(partner: partner, status: status),
           counter: counter,
         ),
       ),
@@ -47,41 +48,55 @@ void main() {
     expect(find.text('7:00 AM - 10:00 PM'), findsOneWidget);
   });
 
-  testWidgets('displays the four tab pills', (tester) async {
+  testWidgets('displays the three tab pills without reviews', (tester) async {
     await pumpStore(tester);
 
     expect(find.text('Menu'), findsOneWidget);
     expect(find.text('About'), findsOneWidget);
     expect(find.text('Photos'), findsOneWidget);
-    expect(find.text('Reviews'), findsOneWidget);
+    expect(find.text('Reviews'), findsNothing);
   });
 
-  testWidgets('renders the 6 category items in MENU CATEGORIES section', (
+  testWidgets('renders the 5 Drip categories in MENU CATEGORIES section', (
     tester,
   ) async {
     await pumpStore(tester);
 
     expect(find.text('MENU CATEGORIES'), findsOneWidget);
     expect(find.text('Cà Phê Series'), findsOneWidget);
-    expect(find.text('Iced Blended'), findsOneWidget);
-    expect(find.text('Milk Tea'), findsOneWidget);
-    expect(find.text('Fresh Lemonade'), findsOneWidget);
-    expect(find.text('Refresher'), findsOneWidget);
-    expect(find.text('Add Ons'), findsOneWidget);
+    expect(find.text('Hello Vietnam'), findsOneWidget);
+    expect(find.text('Tiramisu'), findsOneWidget);
+    expect(find.text('Premium'), findsOneWidget);
+    expect(find.text('Milky Series'), findsOneWidget);
   });
 
-  testWidgets('renders the Best Seller Dirty Avalanche card and confirms cart bar is removed', (
+  testWidgets('renders the Drip best seller and confirms cart bar is removed', (
     tester,
   ) async {
     await pumpStore(tester);
 
     expect(find.text('Try our Best Seller!'), findsOneWidget);
-    expect(find.text('Dirty Avalanche'), findsOneWidget);
-    expect(find.text('Bold coffee. Creamy bliss.'), findsOneWidget);
+    expect(find.text('Dirty Avalanche'), findsNothing);
+    expect(
+      find.text(
+        'Traditional slow-drip dark roast with sweetened condensed milk',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('View'), findsOneWidget);
 
     // Floating cart bar removed
     expect(find.text('View Cart'), findsNothing);
+  });
+
+  testWidgets('renders the Seven best seller only for Seven Coffee & Tea', (
+    tester,
+  ) async {
+    await pumpStore(tester, partner: BrewPartner.b);
+
+    expect(find.text('Seven Coffee & Tea'), findsOneWidget);
+    expect(find.text('Dirty Avalanche'), findsOneWidget);
+    expect(find.text('Drip & Co'), findsNothing);
   });
 
   testWidgets('tapping Best Seller card navigates to OrderWizardScreen', (
@@ -89,38 +104,41 @@ void main() {
   ) async {
     await pumpStore(tester);
 
-    await tester.tap(find.text('Dirty Avalanche'));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(OrderWizardScreen), findsOneWidget);
-  });
-
-  testWidgets('tapping View button on Best Seller card navigates to OrderWizardScreen', (
-    tester,
-  ) async {
-    await pumpStore(tester);
-
     await tester.ensureVisible(find.text('View'));
     await tester.pumpAndSettle();
-
     await tester.tap(find.text('View'));
     await tester.pumpAndSettle();
 
     expect(find.byType(OrderWizardScreen), findsOneWidget);
   });
 
+  testWidgets(
+    'tapping View button on Best Seller card navigates to OrderWizardScreen',
+    (tester) async {
+      await pumpStore(tester);
+
+      await tester.ensureVisible(find.text('View'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('View'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(OrderWizardScreen), findsOneWidget);
+    },
+  );
+
   testWidgets('tapping a category navigates to CategoryMenuScreen', (
     tester,
   ) async {
     await pumpStore(tester);
 
-    await tester.tap(find.text('Iced Blended'));
+    await tester.tap(find.text('Premium'));
     await tester.pumpAndSettle();
 
     expect(find.byType(CategoryMenuScreen), findsOneWidget);
   });
 
-  testWidgets('switching tabs displays About, Photos, and Reviews content', (
+  testWidgets('switching tabs displays About and Photos content', (
     tester,
   ) async {
     await pumpStore(tester);
@@ -130,7 +148,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Our Story'), findsOneWidget);
     expect(find.text('Hours & Location'), findsOneWidget);
-    expect(find.text('Amenities'), findsOneWidget);
+    expect(find.text('Amenities'), findsNothing);
 
     // Switch to Photos tab
     await tester.tap(find.text('Photos'));
@@ -138,23 +156,7 @@ void main() {
     expect(find.text('STORE GALLERY'), findsOneWidget);
     expect(find.text('Barista Pour-Over Station'), findsOneWidget);
 
-    // Switch to Reviews tab
-    await tester.tap(find.text('Reviews'));
-    await tester.pumpAndSettle();
-    expect(find.text('4.9'), findsOneWidget);
-    expect(find.text('Maria Santos'), findsOneWidget);
-    expect(find.text('Review'), findsOneWidget);
-
-    // Tap Review button to open bottom sheet
-    await tester.tap(find.text('Review'));
-    await tester.pumpAndSettle();
-    expect(find.text('Write a Review'), findsOneWidget);
-    expect(find.text('Submit Review'), findsOneWidget);
-
-    // Submit review
-    await tester.tap(find.text('Submit Review'));
-    await tester.pumpAndSettle();
-    expect(find.text('Thank you! Your review has been submitted.'), findsOneWidget);
+    expect(find.text('Reviews'), findsNothing);
   });
 
   testWidgets('Photos tab supports pagination across menu pictures', (
@@ -184,4 +186,51 @@ void main() {
     expect(find.text('Page 1 of 2'), findsOneWidget);
     expect(find.text('Barista Pour-Over Station'), findsOneWidget);
   });
+
+  testWidgets('tapping a photo opens a view-only item preview', (tester) async {
+    await pumpStore(tester);
+
+    await tester.tap(find.text('Photos'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Barista Pour-Over Station'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Barista Pour-Over Station'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('ITEM PREVIEW'), findsOneWidget);
+    expect(find.text('Close'), findsOneWidget);
+    expect(find.byType(OrderWizardScreen), findsNothing);
+  });
+
+  testWidgets(
+    'category cards display pictures on Drip & Co and Seven Coffee & Tea',
+    (tester) async {
+      // Check Drip & Co
+      await pumpStore(tester);
+      expect(find.byType(Image), findsWidgets);
+
+      // Check Seven Coffee & Tea
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StoreLandingScreen(
+            shop: const BrewShop(
+              partner: BrewPartner.b,
+              status: BrewShopStatus.open,
+            ),
+            counter: counter,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Seven Coffee & Tea'), findsOneWidget);
+      expect(find.text('Cà Phê Series'), findsOneWidget);
+      expect(find.text('Iced Blended'), findsOneWidget);
+      expect(find.byType(Image), findsWidgets);
+    },
+  );
 }

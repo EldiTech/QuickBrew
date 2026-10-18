@@ -133,7 +133,10 @@ class _OrdersPanelState extends State<OrdersPanel> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3.5,
+                ),
                 decoration: BoxDecoration(
                   color: BrewColor.cream.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(4),
@@ -197,10 +200,7 @@ class _OrdersPanelState extends State<OrdersPanel> {
         const SizedBox(height: BrewSpace.grid * 2.5),
         if (showPlaced) ...[
           if (placed == null)
-            StaggerItem(
-              index: emptySlot!,
-              child: const _LoadingOrdersState(),
-            )
+            StaggerItem(index: emptySlot!, child: const _LoadingOrdersState())
           else if (placed.isEmpty)
             StaggerItem(
               index: emptySlot!,
@@ -216,7 +216,8 @@ class _OrdersPanelState extends State<OrdersPanel> {
                 index: rowSlots[index],
                 child: _OrderCard(
                   order: order,
-                  shop: widget.shopsForDraft
+                  shop:
+                      widget.shopsForDraft
                           ?.where((s) => s.partner == order.partner)
                           .firstOrNull ??
                       BrewShop(
@@ -226,11 +227,11 @@ class _OrdersPanelState extends State<OrdersPanel> {
                   onTrack: widget.onTrackOrder == null
                       ? null
                       : () => widget.onTrackOrder!(
-                            order,
-                            widget.shopsForDraft
-                                ?.where((s) => s.partner == order.partner)
-                                .firstOrNull,
-                          ),
+                          order,
+                          widget.shopsForDraft
+                              ?.where((s) => s.partner == order.partner)
+                              .firstOrNull,
+                        ),
                 ),
               ),
             ],
@@ -248,7 +249,8 @@ class _OrdersPanelState extends State<OrdersPanel> {
               index: draftSlot!,
               child: _DraftCard(
                 draft: saved,
-                shop: widget.shopsForDraft
+                shop:
+                    widget.shopsForDraft
                         ?.where((s) => s.partner == saved.partner)
                         .firstOrNull ??
                     BrewShop(
@@ -370,19 +372,23 @@ class _FilterTabState extends State<_FilterTab> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           child: AnimatedScale(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             scale: _pressed ? 0.96 : (_hovered && !selected ? 1.03 : 1.0),
             child: AnimatedContainer(
-              duration: reduced ? Duration.zero : const Duration(milliseconds: 160),
+              duration: reduced
+                  ? Duration.zero
+                  : const Duration(milliseconds: 160),
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: selected
                     ? BrewColor.sage.withValues(alpha: 0.32)
                     : (_hovered
-                        ? BrewColor.cream.withValues(alpha: 0.08)
-                        : const Color(0x00000000)),
+                          ? BrewColor.cream.withValues(alpha: 0.08)
+                          : const Color(0x00000000)),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: selected
@@ -416,13 +422,16 @@ class _FilterTabState extends State<_FilterTab> {
                   ),
                   const SizedBox(width: 7),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1.5,
+                    ),
                     decoration: BoxDecoration(
                       color: selected
                           ? BrewColor.sageLight
                           : (widget.hasAlert
-                              ? BrewColor.alert.withValues(alpha: 0.25)
-                              : BrewColor.cream.withValues(alpha: 0.12)),
+                                ? BrewColor.alert.withValues(alpha: 0.25)
+                                : BrewColor.cream.withValues(alpha: 0.12)),
                       borderRadius: BorderRadius.circular(999),
                       border: widget.hasAlert && !selected
                           ? Border.all(
@@ -439,8 +448,8 @@ class _FilterTabState extends State<_FilterTab> {
                         color: selected
                             ? const Color(0xFF0D1B12)
                             : (widget.hasAlert
-                                ? BrewColor.alert
-                                : BrewColor.cream.withValues(alpha: 0.85)),
+                                  ? BrewColor.alert
+                                  : BrewColor.cream.withValues(alpha: 0.85)),
                       ),
                     ),
                   ),
@@ -456,10 +465,7 @@ class _FilterTabState extends State<_FilterTab> {
 
 /// A luxury empty state card with glowing icon medallion and call-to-action button.
 class _EmptyOrdersState extends StatefulWidget {
-  const _EmptyOrdersState({
-    required this.isSavedTab,
-    this.onAction,
-  });
+  const _EmptyOrdersState({required this.isSavedTab, this.onAction});
 
   final bool isSavedTab;
   final VoidCallback? onAction;
@@ -562,13 +568,20 @@ class _EmptyOrdersStateState extends State<_EmptyOrdersState> {
                 onTapUp: (_) => setState(() => _btnPressed = false),
                 onTapCancel: () => setState(() => _btnPressed = false),
                 child: AnimatedScale(
-                  duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                  duration: reduced
+                      ? Duration.zero
+                      : const Duration(milliseconds: 140),
                   curve: Curves.easeOutCubic,
                   scale: _btnPressed ? 0.95 : (_btnHovered ? 1.04 : 1.0),
                   child: AnimatedContainer(
-                    duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                    duration: reduced
+                        ? Duration.zero
+                        : const Duration(milliseconds: 140),
                     curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: _btnPressed
                           ? BrewColor.cream.withValues(alpha: 0.85)
@@ -598,9 +611,14 @@ class _EmptyOrdersStateState extends State<_EmptyOrdersState> {
                         ),
                         const SizedBox(width: 8),
                         AnimatedSlide(
-                          duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                          duration: reduced
+                              ? Duration.zero
+                              : const Duration(milliseconds: 140),
                           curve: Curves.easeOutCubic,
-                          offset: Offset((_btnPressed || _btnHovered) ? 0.25 : 0.0, 0.0),
+                          offset: Offset(
+                            (_btnPressed || _btnHovered) ? 0.25 : 0.0,
+                            0.0,
+                          ),
                           child: const Icon(
                             Icons.arrow_forward_rounded,
                             size: 14,
@@ -659,11 +677,7 @@ class _LoadingOrdersState extends StatelessWidget {
 
 /// An elevated frosted glass card for placed orders with live status beacon and tracking.
 class _OrderCard extends StatefulWidget {
-  const _OrderCard({
-    required this.order,
-    required this.shop,
-    this.onTrack,
-  });
+  const _OrderCard({required this.order, required this.shop, this.onTrack});
 
   final BrewOrder order;
   final BrewShop shop;
@@ -707,7 +721,9 @@ class _OrderCardState extends State<_OrderCard> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           child: AnimatedScale(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             scale: _pressed ? 0.985 : (_cardHovered && isActive ? 1.006 : 1.0),
             child: AnimatedContainer(
@@ -718,15 +734,15 @@ class _OrderCardState extends State<_OrderCard> {
                 color: _pressed
                     ? const Color(0xF5182D20)
                     : (_cardHovered
-                        ? const Color(0xF216271C)
-                        : const Color(0xEB132218)),
+                          ? const Color(0xF216271C)
+                          : const Color(0xEB132218)),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: _pressed
                       ? BrewColor.fieldFocus
                       : (_cardHovered && isActive
-                          ? BrewColor.cream.withValues(alpha: 0.22)
-                          : BrewColor.cream.withValues(alpha: 0.12)),
+                            ? BrewColor.cream.withValues(alpha: 0.22)
+                            : BrewColor.cream.withValues(alpha: 0.12)),
                   width: 1.0,
                 ),
                 boxShadow: [
@@ -782,10 +798,14 @@ class _OrderCardState extends State<_OrderCard> {
                                     vertical: 2,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: BrewColor.cream.withValues(alpha: 0.08),
+                                    color: BrewColor.cream.withValues(
+                                      alpha: 0.08,
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                     border: Border.all(
-                                      color: BrewColor.cream.withValues(alpha: 0.14),
+                                      color: BrewColor.cream.withValues(
+                                        alpha: 0.14,
+                                      ),
                                       width: 0.8,
                                     ),
                                   ),
@@ -804,7 +824,9 @@ class _OrderCardState extends State<_OrderCard> {
                                     _formatTime(placedAt),
                                     style: BrewType.mono.copyWith(
                                       fontSize: 9.5,
-                                      color: BrewColor.cream.withValues(alpha: 0.55),
+                                      color: BrewColor.cream.withValues(
+                                        alpha: 0.55,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -813,13 +835,21 @@ class _OrderCardState extends State<_OrderCard> {
                         ),
                       ),
                       const SizedBox(width: BrewSpace.grid),
-                      _buildStageBadge(order, isActive, isRejected, isCompleted),
+                      _buildStageBadge(
+                        order,
+                        isActive,
+                        isRejected,
+                        isCompleted,
+                      ),
                     ],
                   ),
                   const SizedBox(height: BrewSpace.grid * 1.5),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0x40000000),
                       borderRadius: BorderRadius.circular(10),
@@ -873,9 +903,14 @@ class _OrderCardState extends State<_OrderCard> {
                           onEnter: (_) => setState(() => _trackHovered = true),
                           onExit: (_) => setState(() => _trackHovered = false),
                           child: AnimatedContainer(
-                            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                            duration: reduced
+                                ? Duration.zero
+                                : const Duration(milliseconds: 140),
                             curve: Curves.easeOutCubic,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 7,
+                            ),
                             decoration: BoxDecoration(
                               color: (_trackHovered || _pressed)
                                   ? BrewColor.sage.withValues(alpha: 0.35)
@@ -911,9 +946,14 @@ class _OrderCardState extends State<_OrderCard> {
                                 ),
                                 const SizedBox(width: 5),
                                 AnimatedSlide(
-                                  duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                                  duration: reduced
+                                      ? Duration.zero
+                                      : const Duration(milliseconds: 140),
                                   curve: Curves.easeOutCubic,
-                                  offset: Offset((_trackHovered || _pressed) ? 0.3 : 0.0, 0.0),
+                                  offset: Offset(
+                                    (_trackHovered || _pressed) ? 0.3 : 0.0,
+                                    0.0,
+                                  ),
                                   child: const Icon(
                                     Icons.arrow_forward_rounded,
                                     size: 13,
@@ -1051,7 +1091,9 @@ class _OrderCardState extends State<_OrderCard> {
   }
 
   static String _formatTime(DateTime date) {
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+    final hour = date.hour > 12
+        ? date.hour - 12
+        : (date.hour == 0 ? 12 : date.hour);
     final minute = date.minute.toString().padLeft(2, '0');
     final period = date.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $period';
@@ -1077,6 +1119,10 @@ class _DraftCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final count = draft.drinkCount;
+    // Saved from the "no internet" pop-up rather than from Save for later:
+    // the order is built and only the payment is missing, so the card says
+    // that and its button goes straight to paying.
+    final unpaid = draft.awaitingPayment;
 
     return Container(
       padding: const EdgeInsets.all(BrewSpace.grid * 2.5),
@@ -1101,7 +1147,10 @@ class _DraftCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3.5,
+                ),
                 decoration: BoxDecoration(
                   color: BrewColor.alert.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(4),
@@ -1113,14 +1162,14 @@ class _DraftCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(
-                      Icons.edit_note_rounded,
+                    Icon(
+                      unpaid ? Icons.wifi_off_rounded : Icons.edit_note_rounded,
                       size: 13,
                       color: BrewColor.alert,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'IN PROGRESS DRAFT',
+                      unpaid ? 'AWAITING PAYMENT' : 'IN PROGRESS DRAFT',
                       style: BrewType.mono.copyWith(
                         fontSize: 9.5,
                         letterSpacing: 1.1,
@@ -1177,17 +1226,28 @@ class _DraftCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: BrewSpace.grid * 1.5),
-          Text(
-            'SAVED · PICK UP WHERE YOU LEFT OFF',
-            style: BrewType.mono.copyWith(
-              fontSize: 10,
-              letterSpacing: 1.2,
-              color: BrewColor.cream.withValues(alpha: 0.55),
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                unpaid
+                    ? 'SAVED OFFLINE · UPLOAD YOUR PAYMENT TO FINISH'
+                    : 'SAVED · PICK UP WHERE YOU LEFT OFF',
+                maxLines: 1,
+                softWrap: false,
+                style: BrewType.mono.copyWith(
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  color: BrewColor.cream.withValues(alpha: 0.55),
+                ),
+              ),
             ),
           ),
           const SizedBox(height: BrewSpace.grid * 2),
           BrewPrimaryButton(
-            label: 'RESUME ORDER →',
+            label: unpaid ? 'UPLOAD PAYMENT →' : 'RESUME ORDER →',
             asPill: true,
             onPressed: onResume,
           ),

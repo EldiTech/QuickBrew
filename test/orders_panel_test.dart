@@ -59,10 +59,12 @@ void main() {
         'unitCents': 8000,
       },
     ],
+    bool awaitingPayment = false,
   }) {
     return db.collection('drafts').doc('dave').set({
       'shop': shop,
       'step': step,
+      if (awaitingPayment) 'awaitingPayment': true,
       'lines': lines,
       'pickupName': 'David Espino',
       'pickupPhone': '09171234567',
@@ -346,6 +348,17 @@ void main() {
       expect(find.textContaining('1 drink, not yet ordered'), findsOneWidget);
       expect(find.text('RESUME ORDER →'), findsOneWidget);
       expect(find.text('Discard order'), findsOneWidget);
+    });
+
+    testWidgets('an order saved offline asks for its payment', (tester) async {
+      await saveDraft(step: 'payment', awaitingPayment: true);
+      await pumpPanel(tester, withDraft: true);
+      await tester.tap(find.text('SAVED'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AWAITING PAYMENT'), findsOneWidget);
+      expect(find.text('UPLOAD PAYMENT →'), findsOneWidget);
+      expect(find.text('RESUME ORDER →'), findsNothing);
     });
 
     testWidgets('counts quantities rather than lines', (tester) async {

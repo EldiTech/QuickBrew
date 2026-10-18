@@ -6,28 +6,28 @@
 const DEFAULT_WEB_CONFIG = {
   versionTag: 'v1.0.0 Stable',
   buildNumber: '1.0.0+1',
-  apkSize: '56.0 MB',
-  minAndroid: 'Android 6.0+ (Marshmallow)',
+  apkSize: '59.2 MB',
+  minAndroid: 'Android 7.0+ (Nougat)',
   apkFileName: 'quickbrew-release.apk',
-  checksum: 'CFAD5848B2287D5BE537E88DB1FE04A1AF2B64D8AD1595DDF19C3059F6E75E9B',
+  checksum: '4EE8E3A3524830EEAC4C261D3D35F048A7D6F1519FDD95C4BCA0D4E91342CDB2',
   changelog: '• Initial official release for Seven Coffee & Tea\n• 116 beverages with full customization wizard\n• Live real-time order ledger & GCash QR checkout',
-  
-  heroHeadline: 'Craft Coffee, Ordered in Seconds.',
-  heroSubtitle: 'The definitive specialty coffee companion. Browse 116 curated artisanal recipes, custom-dial your milk and roast profile, and track your brew from extraction to counter in real time.',
+
+  heroHeadline: 'Craft coffee, ordered in seconds.',
+  heroSubtitle: 'Browse the full menu, tailor every detail, and follow your order from the first tap to the counter—all from one thoughtfully designed app.',
   ctaLabel: 'Download APK (v1.0.0)',
-  
+
   drink1Name: 'Caramel Cloud Macchiato',
   drink1Price: '₱145',
   drink2Name: 'Matcha Berry Cold Foam',
   drink2Price: '₱160',
-  
+
   bannerActive: true,
   bannerText: 'Official QuickBrew Android APK is now available for direct download.',
   bannerBadge: 'NEW RELEASE',
-  
-  metaTitle: 'QuickBrew — Official Android Release',
-  metaDesc: 'Download the official QuickBrew Android release for Seven Coffee & Tea. Precision coffee ordering, customizable brews, and live extraction tracking.',
-  
+
+  metaTitle: 'QuickBrew — Coffee, ordered ahead',
+  metaDesc: 'Download QuickBrew for Android and order ahead from your favorite local coffee shop.',
+
   downloadsActive: true
 };
 
@@ -63,6 +63,19 @@ document.addEventListener('DOMContentLoaded', () => {
   initMobileStickyBar();
   detectMobileDevice();
 });
+
+/**
+ * The APK name from the CMS, or the default if it is anything other than a
+ * bare `name.apk` on this site. It goes straight into every download href and
+ * the QR code, so a full URL would send visitors' downloads elsewhere and a
+ * `javascript:` value would run script on this page. firestore.rules enforces
+ * the same pattern on write; this covers stale values cached in localStorage.
+ */
+function safeApkFileName(name) {
+  return (typeof name === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.apk$/.test(name))
+    ? name
+    : 'quickbrew-release.apk';
+}
 
 /**
  * Hydrate and update dynamic website content from config
@@ -125,7 +138,7 @@ function applyCmsConfig(cfg) {
     if (cfg.metaTitle) document.title = cfg.metaTitle;
 
     // Download links href & download attributes
-    const fileName = cfg.apkFileName || 'quickbrew-release.apk';
+    const fileName = safeApkFileName(cfg.apkFileName);
     document.querySelectorAll('.btn-download').forEach(btn => {
       btn.setAttribute('href', fileName);
       btn.setAttribute('download', fileName);
@@ -192,7 +205,7 @@ function recordVisitor() {
  */
 function initDownloadButtons() {
   const downloadBtns = document.querySelectorAll('.btn-download');
-  
+
   downloadBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
       if (currentWebConfig && currentWebConfig.downloadsActive === false) {
@@ -206,7 +219,7 @@ function initDownloadButtons() {
       localStorage.setItem('qb_download_count', current + 1);
 
       showToast('Preparing QuickBrew APK package...');
-      
+
       setTimeout(() => {
         showToast('Download initiated. Check your notification bar.');
       }, 1200);
@@ -220,9 +233,9 @@ function initDownloadButtons() {
 function initCopyChecksum() {
   const copyBtn = document.getElementById('copyChecksumBtn');
   const hashEl = document.getElementById('checksumHash');
-  
+
   if (!copyBtn || !hashEl) return;
-  
+
   copyBtn.addEventListener('click', () => {
     const textToCopy = hashEl.innerText.trim();
     navigator.clipboard.writeText(textToCopy).then(() => {
@@ -248,10 +261,10 @@ function showToast(message) {
     toast.className = 'toast-notice';
     document.body.appendChild(toast);
   }
-  
+
   toast.textContent = message;
   toast.classList.add('show');
-  
+
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => {
     toast.classList.remove('show');
@@ -266,7 +279,7 @@ function generateQRCode() {
   const container = document.getElementById('qrCodeContainer');
   if (!container) return;
 
-  const fileName = currentWebConfig.apkFileName || 'quickbrew-release.apk';
+  const fileName = safeApkFileName(currentWebConfig.apkFileName);
   const downloadUrl = new URL(fileName, window.location.href).href;
 
   container.innerHTML = '';
@@ -295,7 +308,7 @@ function generateQRCode() {
  */
 function initSmoothScroll() {
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function(e) {
+    anchor.addEventListener('click', function (e) {
       const targetId = this.getAttribute('href');
       if (targetId === '#' || targetId === '') return;
       const target = document.querySelector(targetId);

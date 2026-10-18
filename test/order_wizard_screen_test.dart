@@ -9,6 +9,7 @@ import 'package:quick_brew/brew_counter.dart';
 import 'package:quick_brew/brew_menu_seed.dart';
 import 'package:quick_brew/screens/menu_screen.dart';
 import 'package:quick_brew/screens/order_wizard_screen.dart';
+import 'package:quick_brew/services/connectivity.dart';
 import 'package:quick_brew/widgets/menu_item_image.dart';
 import 'package:quick_brew/widgets/stagger.dart';
 
@@ -58,8 +59,10 @@ void main() {
   /// stubbed the list past the collection would keep passing if the read
   /// broke.
   Future<void> seedAddOns({BrewPartner partner = BrewPartner.a}) async {
-    final collection =
-        db.collection('shops').doc(partner.id).collection('addons');
+    final collection = db
+        .collection('shops')
+        .doc(partner.id)
+        .collection('addons');
     for (final addOn in BrewAddOnSeed.all) {
       await collection.add({
         'name': addOn.name,
@@ -142,7 +145,6 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-
   /// Presses a label and lets the cross-fade finish. Scrolls it into view
   /// first: the pinned footer is always on screen, but the option rows on a
   /// long step are not.
@@ -157,6 +159,13 @@ void main() {
     await tester.ensureVisible(finder.first);
     await tester.tap(finder.first);
     await tester.pumpAndSettle();
+  }
+
+  /// The add-another picker starts at categories before it reveals products.
+  /// The test board's fixtures are intentionally uncategorised, so they all
+  /// land under this explicit category.
+  Future<void> chooseOtherDrinks(WidgetTester tester) async {
+    await press(tester, 'Other drinks');
   }
 
   /// Presses Upload receipt and lets the picked bytes land.
@@ -208,6 +217,29 @@ void main() {
     expect(find.text('₱90'), findsOneWidget);
   });
 
+  testWidgets('the cart shows the picture of each drink in it', (tester) async {
+    final picture = base64Decode(onePixelPng);
+    await pumpWizard(
+      tester,
+      item: BrewMenuItem(
+        id: 'latte',
+        name: 'Iced Latte',
+        sizePrices: latte.sizePrices,
+        imageBytes: picture,
+      ),
+    );
+    await fillCart(tester);
+
+    expect(find.text('Step 3 of 6'.toUpperCase()), findsOneWidget);
+    final shown = find.byWidgetPredicate(
+      (widget) =>
+          widget is Image &&
+          widget.image is MemoryImage &&
+          identical((widget.image as MemoryImage).bytes, picture),
+    );
+    expect(shown, findsOneWidget);
+  });
+
   testWidgets('a flat-priced item says there is no size to pick', (
     tester,
   ) async {
@@ -241,6 +273,52 @@ void main() {
     await press(tester, 'Milk choice');
     await press(tester, 'Oat milk');
     expect(find.text('₱130'), findsOneWidget);
+  });
+
+  testWidgets('one add-on can be repeated up to five times with others', (
+    tester,
+  ) async {
+    await seedAddOns();
+    await pumpWizard(tester);
+    await press(tester, 'Medium');
+    await press(tester, 'Customise your drink');
+    await press(tester, 'Coffee');
+
+    for (var i = 0; i < 5; i++) {
+      await press(tester, 'Espresso shot');
+    }
+
+    // Five espresso shots are five surcharges, and another add-on can still
+    // be selected on the same drink.
+    await press(tester, 'Sinkers');
+    await press(tester, 'Pearls');
+    expect(find.text('₱140'), findsOneWidget);
+
+    await press(tester, 'Add to cart');
+    expect(find.textContaining('5× Espresso shot'), findsOneWidget);
+  });
+
+  testWidgets('a sixth copy of one add-on is refused', (tester) async {
+    await seedAddOns();
+    await pumpWizard(tester);
+    await press(tester, 'Medium');
+    await press(tester, 'Customise your drink');
+    await press(tester, 'Coffee');
+
+    for (var i = 0; i < 5; i++) {
+      await press(tester, 'Espresso shot');
+    }
+
+    final maximum = find.bySemanticsLabel('Maximum 5 Espresso shot');
+    expect(maximum, findsOneWidget);
+    await tester.tap(maximum);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add-on limit reached.'), findsOneWidget);
+    expect(
+      find.textContaining('You can add up to 5 Espresso shot per drink.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('the board prices two sinkers above their own heading', (
@@ -278,9 +356,7 @@ void main() {
     expect(find.text('₱180'), findsOneWidget);
   });
 
-  testWidgets('pressing plus at five pops up the quantity cap', (
-    tester,
-  ) async {
+  testWidgets('pressing plus at five pops up the quantity cap', (tester) async {
     await pumpWizard(tester);
     await press(tester, 'Medium');
     await press(tester, 'Customise your drink');
@@ -410,10 +486,7 @@ void main() {
     await press(tester, 'Sinkers');
     expect(find.text('Pearls'), findsNothing);
     expect(
-      find.descendant(
-        of: find.byType(Row),
-        matching: find.text('2'),
-      ),
+      find.descendant(of: find.byType(Row), matching: find.text('2')),
       findsWidgets,
       reason: 'the heading carries how many of its options are on the drink',
     );
@@ -492,6 +565,7 @@ void main() {
     await pumpWizard(tester);
     await fillCart(tester);
     await press(tester, 'Add another drink');
+    await chooseOtherDrinks(tester);
 
     expect(find.text('Select coffee & size'), findsOneWidget);
 
@@ -527,6 +601,7 @@ void main() {
     await pumpWizard(tester);
     await fillCart(tester);
     await press(tester, 'Add another drink');
+    await chooseOtherDrinks(tester);
 
     // The board offers both items, not just the one the reader arrived on.
     expect(find.text('Iced Latte'), findsWidgets);
@@ -545,11 +620,50 @@ void main() {
     expect(find.text('₱105'), findsOneWidget);
   });
 
+  testWidgets('Add another starts with categories and pages products', (
+    tester,
+  ) async {
+    for (var index = 1; index <= 7; index++) {
+      await db
+          .collection('shops')
+          .doc(BrewPartner.a.id)
+          .collection('menu')
+          .doc('iced-$index')
+          .set({
+            'name': 'Iced drink $index',
+            'priceCents': 2500 + index,
+            'category': 'Iced Coffee',
+            'sort': index,
+          });
+    }
+
+    await pumpWizard(tester);
+    await fillCart(tester);
+    await press(tester, 'Add another drink');
+
+    expect(find.text('CHOOSE A CATEGORY'), findsOneWidget);
+    expect(find.text('Iced Coffee'), findsOneWidget);
+    expect(find.text('7 drinks'), findsOneWidget);
+    expect(find.text('Iced drink 1'), findsNothing);
+
+    await press(tester, 'Iced Coffee');
+
+    expect(find.text('Page 1 of 2'), findsOneWidget);
+    expect(find.text('Iced drink 1'), findsOneWidget);
+    expect(find.text('Iced drink 7'), findsNothing);
+
+    await press(tester, 'Next');
+
+    expect(find.text('Page 2 of 2'), findsOneWidget);
+    expect(find.text('Iced drink 7'), findsOneWidget);
+  });
+
   testWidgets('a cart of five drinks stops offering a sixth', (tester) async {
     await pumpWizard(tester);
     await fillCart(tester);
     for (var i = 0; i < 4; i++) {
       await press(tester, 'Add another drink');
+      await chooseOtherDrinks(tester);
       await press(tester, 'Medium');
       await press(tester, 'Customise your drink');
       await press(tester, 'Add to cart');
@@ -582,6 +696,7 @@ void main() {
     await press(tester, 'Add to cart');
 
     await press(tester, 'Add another drink');
+    await chooseOtherDrinks(tester);
     await press(tester, 'Medium');
     await press(tester, 'Customise your drink');
     await press(tester, 'Add to cart');
@@ -644,8 +759,9 @@ void main() {
     expect(find.text('Step 2 of 6'.toUpperCase()), findsOneWidget);
   });
 
-  testWidgets('a resumed draft at the drink cap refuses a line with rows spare',
-      (tester) async {
+  testWidgets('a resumed draft at the drink cap refuses a line with rows spare', (
+    tester,
+  ) async {
     // The backstop the button gate cannot cover. Two lines holding five drinks
     // between them leaves three rows free, so the line count says there is
     // room — and this door does not run through the cart body's conditional at
@@ -720,6 +836,7 @@ void main() {
     // Two lines, so the one that stays gives the total something to fall to
     // that is neither the pair's total nor zero.
     await press(tester, 'Add another drink');
+    await chooseOtherDrinks(tester);
     await press(tester, 'Medium');
     await press(tester, 'Customise your drink');
     await press(tester, 'Add to cart');
@@ -727,13 +844,17 @@ void main() {
     // price, so a bare text finder would match the rows as well as the total.
     String cartTotal() => tester
         .widget<Text>(
-          find.descendant(
-            of: find.ancestor(
-              of: find.text('CART TOTAL'),
-              matching: find.byType(Row),
-            ).first,
-            matching: find.byType(Text),
-          ).last,
+          find
+              .descendant(
+                of: find
+                    .ancestor(
+                      of: find.text('CART TOTAL'),
+                      matching: find.byType(Row),
+                    )
+                    .first,
+                matching: find.byType(Text),
+              )
+              .last,
         )
         .data!;
 
@@ -787,8 +908,10 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), '123');
     await tester.pumpAndSettle();
     await press(tester, 'Pay for your order');
-    expect(find.textContaining('does not look like a full number'),
-        findsOneWidget);
+    expect(
+      find.textContaining('does not look like a full number'),
+      findsOneWidget,
+    );
 
     await tester.enterText(find.byType(TextField).at(1), '09171234567');
     await tester.pumpAndSettle();
@@ -806,7 +929,10 @@ void main() {
     // Nothing to scan means nothing to upload, and the step says why rather
     // than drawing an empty frame where a code goes.
     expect(find.text('PAY AT THE COUNTER'), findsOneWidget);
-    expect(find.textContaining('has not put up a payment code'), findsOneWidget);
+    expect(
+      find.textContaining('has not put up a payment code'),
+      findsOneWidget,
+    );
     expect(find.text('YOUR RECEIPT'), findsNothing);
 
     // And the forward button is live: holding a reader at an upload for a
@@ -885,7 +1011,10 @@ void main() {
     // would pass on a layout that never drew anything.
     await tester.runAsync(() async {
       final image = tester.widget<Image>(find.byType(Image).first);
-      await precacheImage(image.image, tester.element(find.byType(Image).first));
+      await precacheImage(
+        image.image,
+        tester.element(find.byType(Image).first),
+      );
     });
     await tester.pumpAndSettle();
 
@@ -900,7 +1029,8 @@ void main() {
     expect(
       qr.width,
       lessThan(qr.height),
-      reason: 'a portrait code must stay portrait rather than being '
+      reason:
+          'a portrait code must stay portrait rather than being '
           'letterboxed into a square',
     );
 
@@ -910,31 +1040,33 @@ void main() {
     expect(find.text('Confirm order'), findsWidgets);
   });
 
-  testWidgets('an uploaded receipt opens the button and travels onto the order',
-      (tester) async {
-    await seedPayQr();
-    await pumpWizard(tester);
-    await fillCart(tester);
-    await fillPickup(tester);
+  testWidgets(
+    'an uploaded receipt opens the button and travels onto the order',
+    (tester) async {
+      await seedPayQr();
+      await pumpWizard(tester);
+      await fillCart(tester);
+      await fillPickup(tester);
 
-    await uploadReceipt(tester);
+      await uploadReceipt(tester);
 
-    // Shown back rather than replaced with a tick, so the reader can see they
-    // picked the right transfer.
-    expect(find.byType(BrewMenuItemImage), findsWidgets);
+      // Shown back rather than replaced with a tick, so the reader can see they
+      // picked the right transfer.
+      expect(find.byType(BrewMenuItemImage), findsWidgets);
 
-    await press(tester, 'Review your order');
-    expect(find.text('Confirm order'), findsWidgets);
-    expect(find.text('Scan to pay'), findsWidgets);
+      await press(tester, 'Review your order');
+      expect(find.text('Confirm order'), findsWidgets);
+      expect(find.text('Scan to pay'), findsWidgets);
 
-    await confirm(tester);
+      await confirm(tester);
 
-    final snapshot = await db.collection('orders').get();
-    expect(snapshot.docs, hasLength(1));
-    final data = snapshot.docs.single.data();
-    expect(data['paymentMethod'], 'Scan to pay');
-    expect(data['receiptBase64'], onePixelPng);
-  });
+      final snapshot = await db.collection('orders').get();
+      expect(snapshot.docs, hasLength(1));
+      final data = snapshot.docs.single.data();
+      expect(data['paymentMethod'], 'Scan to pay');
+      expect(data['receiptBase64'], onePixelPng);
+    },
+  );
 
   testWidgets('removing the receipt closes the button again', (tester) async {
     await seedPayQr();
@@ -1049,10 +1181,7 @@ void main() {
     final data = (await db.collection('orders').get()).docs.single.data();
     final scheduled = data['scheduledFor'];
     expect(scheduled, isA<Timestamp>());
-    expect(
-      (scheduled as Timestamp).toDate().isAfter(DateTime.now()),
-      isTrue,
-    );
+    expect((scheduled as Timestamp).toDate().isAfter(DateTime.now()), isTrue);
 
     // And it survives the round-trip through the reader every screen uses.
     final order = BrewOrder.read('id', data);
@@ -1115,10 +1244,9 @@ void main() {
     final snapshot = await db.collection('orders').get();
     // Both add-ons reach the counter, in board order rather than in the order
     // the reader happened to tap them.
-    expect(
-      snapshot.docs.single.data()['items'],
-      ['2× Iced Latte (Large) + Espresso shot, Pearls'],
-    );
+    expect(snapshot.docs.single.data()['items'], [
+      '2× Iced Latte (Large) + Espresso shot, Pearls',
+    ]);
     // (9000 + 1000 + 1000) × 2.
     expect(snapshot.docs.single.data()['totalCents'], 22000);
   });
@@ -1244,6 +1372,11 @@ void main() {
       // Saved from the payment step, so the step and the pickup form both have
       // something in them worth checking travelled.
       await press(tester, 'Save for later');
+      expect(
+        find.text('SAVING'),
+        findsNothing,
+        reason: 'a completed save must never leave the action spinning',
+      );
 
       final draft = await savedDraft();
       expect(draft, isNotNull);
@@ -1264,6 +1397,117 @@ void main() {
       // No order was placed. A draft is a bookmark in the reader's own flow, and
       // nothing about it reaches the counter.
       expect((await db.collection('orders').get()).docs, isEmpty);
+    });
+
+    group('with no internet', () {
+      tearDown(() => BrewConnectivity.debugOverride = null);
+
+      testWidgets('reaching payment offers to save the order to pay later', (
+        tester,
+      ) async {
+        BrewConnectivity.debugOverride = () async => false;
+        await pumpWizard(tester);
+        await fillCart(tester);
+        await fillPickup(tester);
+
+        // Held on the pickup step: there is no connection to pay over.
+        expect(find.text('Oops — no internet detected.'), findsOneWidget);
+        await press(tester, 'Save order, pay later');
+
+        final draft = await savedDraft();
+        expect(draft, isNotNull);
+        expect(draft!['awaitingPayment'], isTrue);
+        // Filed on payment, the one thing left to do when they come back.
+        expect(draft['step'], 'payment');
+        expect(draft['pickupPhone'], '09171234567');
+        expect((await db.collection('orders').get()).docs, isEmpty);
+
+        final read = BrewDraft.read(draft);
+        expect(read?.awaitingPayment, isTrue);
+      });
+
+      testWidgets('staying keeps the reader on pickup, and saves nothing', (
+        tester,
+      ) async {
+        BrewConnectivity.debugOverride = () async => false;
+        await pumpWizard(tester);
+        await fillCart(tester);
+        await fillPickup(tester);
+
+        await press(tester, 'Stay here');
+        expect(find.text('Step 4 of 6'.toUpperCase()), findsOneWidget);
+        expect(await savedDraft(), isNull);
+
+        // Signal comes back: the same press now goes through.
+        BrewConnectivity.debugOverride = () async => true;
+        await press(tester, 'Pay for your order');
+        expect(find.text('Step 5 of 6'.toUpperCase()), findsOneWidget);
+      });
+
+      testWidgets('a saved payment order cannot bypass payment while offline', (
+        tester,
+      ) async {
+        BrewConnectivity.debugOverride = () async => false;
+        await seedMenu();
+        await seedPayQr();
+
+        const draft = BrewDraft(
+          partner: BrewPartner.a,
+          step: 'payment',
+          lines: [
+            BrewDraftLine(
+              itemId: 'latte',
+              size: BrewItemSize.medium,
+              extraIds: [],
+              quantity: 1,
+              unitCents: 8000,
+            ),
+          ],
+          pickupName: 'Dana Cruz',
+          pickupPhone: '09171234567',
+          pickupNote: '',
+          paymentMethod: 'Scan to pay',
+          awaitingPayment: true,
+        );
+
+        await pumpWizard(tester, draft: draft);
+        expect(find.text('Step 5 of 6'.toUpperCase()), findsOneWidget);
+        expect(
+          find.textContaining('OFFLINE'),
+          findsOneWidget,
+          reason: 'the wizard should disclose the offline state before payment',
+        );
+
+        await press(tester, 'Review your order');
+
+        expect(find.text('Oops — no internet detected.'), findsOneWidget);
+        expect(find.text('Confirm order'), findsNothing);
+
+        // Staying keeps the saved order on the payment step rather than
+        // letting the reader walk around the payment gate offline.
+        await press(tester, 'Stay here');
+        expect(find.text('Step 5 of 6'.toUpperCase()), findsOneWidget);
+      });
+
+      testWidgets('losing signal before confirming places no order', (
+        tester,
+      ) async {
+        await pumpWizard(tester);
+        await fillCart(tester);
+        await fillPickup(tester);
+        await press(tester, 'Review your order');
+
+        BrewConnectivity.debugOverride = () async => false;
+        await confirm(tester);
+
+        expect(find.text('Oops — no internet detected.'), findsOneWidget);
+        await press(tester, 'Save order, pay later');
+
+        expect((await db.collection('orders').get()).docs, isEmpty);
+        final draft = await savedDraft();
+        expect(draft?['awaitingPayment'], isTrue);
+        expect(draft?['step'], 'payment');
+      });
     });
 
     testWidgets('resumes on the step it was left on, with the cart intact', (
@@ -1392,9 +1636,7 @@ void main() {
     /// largest index dealt against the group's own count is the check that does
     /// not depend on when the rows happened to mount.
     void expectIndicesInsideCount(WidgetTester tester) {
-      final group = tester.widget<StaggerGroup>(
-        find.byType(StaggerGroup).last,
-      );
+      final group = tester.widget<StaggerGroup>(find.byType(StaggerGroup).last);
       final indices = tester
           .widgetList<StaggerItem>(
             find.descendant(
@@ -1559,4 +1801,3 @@ void main() {
     expect(find.text('Select coffee & size'), findsOneWidget);
   });
 }
-

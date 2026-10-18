@@ -169,7 +169,10 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
 
   Future<void> _addItem(BuildContext context) => _editSheet(context);
 
-  Future<void> _editSheet(BuildContext context, {BrewMenuItem? existing}) async {
+  Future<void> _editSheet(
+    BuildContext context, {
+    BrewMenuItem? existing,
+  }) async {
     final draft = await showModalBottomSheet<_MenuItemDraft>(
       context: context,
       isScrollControlled: true,
@@ -246,32 +249,32 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
         child: BrewBackground(
           child: BrewSheet(
             staggerCount: 4,
-          children: [
-            StaggerItem(index: 0, child: _header(context)),
-            SizedBox(height: brewBlockGap(compact)),
-            StaggerItem(
-              index: 1,
-              child: Text(
-                widget.partner.name,
-                style: BrewType.displayAt(compact ? 28 : 34),
+            children: [
+              StaggerItem(index: 0, child: _header(context)),
+              SizedBox(height: brewBlockGap(compact)),
+              StaggerItem(
+                index: 1,
+                child: Text(
+                  widget.partner.name,
+                  style: BrewType.displayAt(compact ? 28 : 34),
+                ),
               ),
-            ),
-            const SizedBox(height: BrewSpace.grid),
-            StaggerItem(
-              index: 2,
-              child: Text(
-                'Add, edit or remove what this shop sells.',
-                style: BrewType.rowBody,
+              const SizedBox(height: BrewSpace.grid),
+              StaggerItem(
+                index: 2,
+                child: Text(
+                  'Add, edit or remove what this shop sells.',
+                  style: BrewType.rowBody,
+                ),
               ),
-            ),
-            SizedBox(height: brewBlockGap(compact)),
-            StaggerItem(index: 3, child: _board(context)),
-          ],
+              SizedBox(height: brewBlockGap(compact)),
+              StaggerItem(index: 3, child: _board(context)),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _header(BuildContext context) {
     return Row(
@@ -306,12 +309,14 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
 
   List<BrewMenuItem> _byCategory(List<BrewMenuItem> items) {
     if (_category == _allCategories) return items;
-    final inCategory =
-        items.where((item) => item.category == _category).toList();
+    final inCategory = items
+        .where((item) => item.category == _category)
+        .toList();
     if (inCategory.isEmpty) return items;
     if (_subCategory == _allCategories) return inCategory;
-    final inSub =
-        inCategory.where((item) => item.subCategory == _subCategory).toList();
+    final inSub = inCategory
+        .where((item) => item.subCategory == _subCategory)
+        .toList();
     return inSub.isEmpty ? inCategory : inSub;
   }
 
@@ -427,7 +432,10 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
                 ),
                 const SizedBox(height: BrewSpace.grid * 1.5),
                 if (visible.isEmpty)
-                  Text('No products match that search.', style: BrewType.rowBody)
+                  Text(
+                    'No products match that search.',
+                    style: BrewType.rowBody,
+                  )
                 else
                   BrewGrid(
                     children: [
@@ -482,8 +490,7 @@ class _AdminMenuScreenState extends State<AdminMenuScreen> {
         BrewMonoButton(
           label: _importing ? 'Importing' : 'Import',
           semanticsLabel: 'Import the ${widget.partner.name} menu',
-          onPressed:
-              (_importing || widget.admin == null) ? null : _importSeed,
+          onPressed: (_importing || widget.admin == null) ? null : _importSeed,
         ),
       ],
     );
@@ -638,42 +645,56 @@ class _MenuItemRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _MenuCardImage(bytes: item.imageBytes, category: filing),
-          Padding(
-            padding: const EdgeInsets.all(BrewSpace.grid * 1.5),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, style: BrewType.rowTitle),
-                if (item.description case final description?) ...[
-                  const SizedBox(height: 4),
+          // Expanded so the text block takes whatever height [BrewGrid]'s
+          // shared-height row hands this cell, and the Spacer below can pin
+          // price and buttons to the card's foot. Without it a two-line name
+          // in one cell pushed its price and Edit/Delete lower than its
+          // neighbour's, and the row read as two ragged columns.
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(BrewSpace.grid * 1.5),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    description,
-                    style: BrewType.rowBody,
-                    maxLines: 1,
+                    item.name,
+                    style: BrewType.rowTitle,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ],
-                const SizedBox(height: BrewSpace.grid),
-                if (item.price case final price?)
-                  Text(price, style: BrewType.bodyMedium),
-                // One boxed chip per size, wrapped rather than run onto a
-                // line this narrow a cell cannot spare — "M ₱80 · L ₱90" runs
-                // past the edge once the peso figure gets a second digit, and
-                // an ellipsis there loses the admin the exact figure they
-                // opened this board to check. See [MenuScreen]'s matching
-                // `_MenuCardPriceChip`, which this mirrors so the two boards
-                // read as one system.
-                if (item.sizeLines.isNotEmpty)
-                  _MenuCardPrices(sizeLines: item.sizeLines),
-                const SizedBox(height: BrewSpace.grid * 1.5),
-                Row(
-                  children: [
-                    BrewMonoButton(label: 'Edit', onPressed: onEdit),
-                    const SizedBox(width: BrewSpace.grid * 2),
-                    BrewMonoButton(label: 'Delete', onPressed: onDelete),
+                  if (item.description case final description?) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: BrewType.rowBody,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
-                ),
-              ],
+                  const SizedBox(height: BrewSpace.grid),
+                  const Spacer(),
+                  if (item.price case final price?)
+                    Text(price, style: BrewType.bodyMedium),
+                  // One boxed chip per size, wrapped rather than run onto a
+                  // line this narrow a cell cannot spare — "M ₱80 · L ₱90" runs
+                  // past the edge once the peso figure gets a second digit, and
+                  // an ellipsis there loses the admin the exact figure they
+                  // opened this board to check. See [MenuScreen]'s matching
+                  // `_MenuCardPriceChip`, which this mirrors so the two boards
+                  // read as one system.
+                  if (item.sizeLines.isNotEmpty)
+                    _MenuCardPrices(sizeLines: item.sizeLines),
+                  const SizedBox(height: BrewSpace.grid * 1.5),
+                  Wrap(
+                    spacing: BrewSpace.grid,
+                    runSpacing: BrewSpace.grid * 0.5,
+                    children: [
+                      BrewMonoButton(label: 'Edit', onPressed: onEdit),
+                      BrewMonoButton(label: 'Delete', onPressed: onDelete),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -705,7 +726,9 @@ class _MenuCardPrices extends StatelessWidget {
         children: [
           for (final (index, (size, price)) in sizeLines.indexed) ...[
             if (index > 0) const SizedBox(width: BrewSpace.grid * 0.5),
-            Expanded(child: _MenuCardPriceChip(size: size, price: price)),
+            Expanded(
+              child: _MenuCardPriceChip(size: size, price: price),
+            ),
           ],
         ],
       ),
@@ -744,8 +767,11 @@ class _MenuCardPriceChip extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text(
           '${size.label.characters.first.toUpperCase()} $price',
-          style: BrewType.mono
-              .copyWith(color: BrewColor.cream, fontSize: 13, height: 1.2),
+          style: BrewType.mono.copyWith(
+            color: BrewColor.cream,
+            fontSize: 13,
+            height: 1.2,
+          ),
           maxLines: 1,
         ),
       ),
@@ -782,23 +808,30 @@ class _MenuCardImage extends StatelessWidget {
                 ),
         ),
         if (category != null)
+          // Bounded on the right too, so a long filing ellipsises inside the
+          // photo ("VIETNAMESE CO…") instead of running off the card's edge
+          // and being cut mid-letter by its clip.
           Positioned(
             left: BrewSpace.grid,
+            right: BrewSpace.grid,
             top: BrewSpace.grid,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: BrewSpace.grid,
-                vertical: 5,
-              ),
-              decoration: BoxDecoration(
-                color: BrewColor.field.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(BrewSpace.radius),
-              ),
-              child: Text(
-                category!.toUpperCase(),
-                style: BrewType.mono.copyWith(color: BrewColor.cream),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: BrewSpace.grid,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: BrewColor.field.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(BrewSpace.radius),
+                ),
+                child: Text(
+                  category!.toUpperCase(),
+                  style: BrewType.mono.copyWith(color: BrewColor.cream),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
           ),
@@ -894,8 +927,9 @@ class _MenuItemSheet extends StatefulWidget {
 
 class _MenuItemSheetState extends State<_MenuItemSheet> {
   late final _name = TextEditingController(text: widget.existing?.name ?? '');
-  late final _description =
-      TextEditingController(text: widget.existing?.description ?? '');
+  late final _description = TextEditingController(
+    text: widget.existing?.description ?? '',
+  );
 
   /// The category and sub-category picks, held as plain strings rather than
   /// controllers: both are now chosen off a grid, not typed, so there is no
@@ -931,9 +965,7 @@ class _MenuItemSheetState extends State<_MenuItemSheet> {
   /// Which sizes this product is priced by. Empty means the flat [_price]
   /// field above is the one in play — see the doc on [BrewMenuItem.sizePrices]
   /// for why the two never both apply.
-  late final Set<BrewItemSize> _sizes = {
-    ...?widget.existing?.sizePrices.keys,
-  };
+  late final Set<BrewItemSize> _sizes = {...?widget.existing?.sizePrices.keys};
 
   /// Carried forward from the item being edited, then replaced or cleared in
   /// place — the same "prime once, edit locally" shape the text fields use,
@@ -1070,9 +1102,11 @@ class _MenuItemSheetState extends State<_MenuItemSheet> {
     // confirmed there is still what the admin meant to save — Save is the
     // one action on this sheet that reads as "I am done", so it commits
     // whatever is sitting in an open Add field rather than discarding it.
-    final category = (_addingCategory ? _newCategory.text : (_category ?? '')).trim();
+    final category = (_addingCategory ? _newCategory.text : (_category ?? ''))
+        .trim();
     final subCategory =
-        (_addingSubCategory ? _newSubCategory.text : (_subCategory ?? '')).trim();
+        (_addingSubCategory ? _newSubCategory.text : (_subCategory ?? ''))
+            .trim();
     // `isFinite`, not just non-null: tryParse happily returns Infinity for
     // "1e999" or a few hundred pasted digits, and (Infinity * 100).round()
     // throws UnsupportedError out of a gesture callback — an uncaught exception
@@ -1098,8 +1132,9 @@ class _MenuItemSheetState extends State<_MenuItemSheet> {
         // A sub-category with no category above it is not a place on the
         // board — [BrewMenuItem.subCategory] says as much — so it is dropped
         // rather than stored as an orphan the filters could never reach.
-        subCategory:
-            (category.isEmpty || subCategory.isEmpty) ? null : subCategory,
+        subCategory: (category.isEmpty || subCategory.isEmpty)
+            ? null
+            : subCategory,
         sizePrices: sizePrices,
         priceCents: flatPrice == null ? null : (flatPrice * 100).round(),
         // No field on this sheet changes it — see the doc on
@@ -1130,7 +1165,8 @@ class _MenuItemSheetState extends State<_MenuItemSheet> {
         // A flat 24px here was fine while the sheet stayed short of the top
         // of the screen; a full-length form reaches it, and 24px alone sits
         // the title under the status bar rather than clear of it.
-        top: math.max(media.padding.top, BrewSpace.minInset) +
+        top:
+            math.max(media.padding.top, BrewSpace.minInset) +
             BrewSpace.headerClearance,
         bottom: media.viewInsets.bottom + BrewSpace.grid * 4,
       ),
@@ -1302,7 +1338,9 @@ class _MenuItemSheetState extends State<_MenuItemSheet> {
               label: 'Price',
               controller: _price,
               hint: '0.00',
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _save(),
             )
@@ -1315,8 +1353,9 @@ class _MenuItemSheetState extends State<_MenuItemSheet> {
                     label: '${size.label} price',
                     controller: _sizePrice[size]!,
                     hint: '0.00',
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _save(),
                   ),

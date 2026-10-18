@@ -13,17 +13,21 @@ import '../widgets/brew_background.dart';
 import '../widgets/brew_buttons.dart';
 import '../widgets/brew_icons.dart';
 import '../widgets/brew_sheet.dart';
+import '../widgets/brew_transitions.dart';
 import '../widgets/cup_mark.dart';
 import '../widgets/order_track.dart';
 import '../widgets/shop_mark.dart';
 import '../widgets/stagger.dart';
+import 'favorites_panel.dart';
 import 'order_tracking_screen.dart';
 import 'orders_panel.dart';
 import 'profile_panel.dart';
+import 'whole_menu_screen.dart';
 
 /// Which of the three tabs is showing.
 enum BrewTab {
   home('Home'),
+  favorites('Favorites'),
   orders('Orders'),
   profile('Profile');
 
@@ -71,6 +75,7 @@ class HomeScreen extends StatefulWidget {
     required this.session,
     this.counter,
     this.onViewMenu,
+    this.onViewWholeMenu,
     this.onResumeDraft,
     this.onDiscardDraft,
     this.onSignOut,
@@ -89,6 +94,10 @@ class HomeScreen extends StatefulWidget {
 
   /// Fired by a shop card. The one path off this screen that matters.
   final void Function(BrewShop shop)? onViewMenu;
+
+  /// Fired by "View whole menu" button on a shop card. If null, opens
+  /// [WholeMenuViewerScreen] directly.
+  final void Function(BrewShop shop)? onViewWholeMenu;
 
   /// Fired by the Saved order card on the Orders tab. Reopens the wizard on the
   /// step the reader left, which needs the board resolved first — so it is
@@ -117,26 +126,21 @@ class HomeScreen extends StatefulWidget {
     required BrewSession session,
     BrewCounter? counter,
     void Function(BrewShop shop)? onViewMenu,
+    void Function(BrewShop shop)? onViewWholeMenu,
     void Function(BrewDraft draft)? onResumeDraft,
     void Function(BrewDraft draft)? onDiscardDraft,
     VoidCallback? onSignOut,
   }) {
-    final duration = reduced ? Duration.zero : BrewMotion.transit;
-    return PageRouteBuilder<void>(
-      transitionDuration: duration,
-      reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) => HomeScreen(
+    return brewPageRoute<void>(
+      reduced: reduced,
+      child: HomeScreen(
         session: session,
         counter: counter,
         onViewMenu: onViewMenu,
+        onViewWholeMenu: onViewWholeMenu,
         onResumeDraft: onResumeDraft,
         onDiscardDraft: onDiscardDraft,
         onSignOut: onSignOut,
-      ),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
       ),
     );
   }
@@ -198,8 +202,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final counter = widget.counter;
     if (counter == null) return;
     _shops = BrewCounter.latest(counter.shops());
-    _activeOrders =
-        BrewCounter.latest(counter.activeOrders(widget.session.uid));
+    _activeOrders = BrewCounter.latest(
+      counter.activeOrders(widget.session.uid),
+    );
     _orders = BrewCounter.latest(counter.orders(widget.session.uid));
     _draft = BrewCounter.latest(counter.draft(widget.session.uid));
   }
@@ -228,7 +233,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _markNoticesSeen(List<BrewOrder> notices) {
     // Fired from a post-frame callback, which can outlive this screen.
     if (!mounted) return;
-    final keys = {for (final order in notices) '${order.id}:${order.stage.name}'};
+    final keys = {
+      for (final order in notices) '${order.id}:${order.stage.name}',
+    };
     if (_seenNotices.containsAll(keys)) return;
     setState(() => _seenNotices.addAll(keys));
     _prefs?.setStringList(_seenKey, _seenNotices.toList());
@@ -279,6 +286,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openWholeMenu(BrewShop shop) {
+    if (widget.onViewWholeMenu != null) {
+      widget.onViewWholeMenu!(shop);
+      return;
+    }
+    Navigator.of(context).push(
+      WholeMenuViewerScreen.route(
+        shop: shop,
+        counter: widget.counter,
+        session: widget.session,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -298,65 +319,81 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BrewBackground(
           child: Column(
             children: [
-            // The nav is outside the scroll view, so it is on the screen at every
-            // scroll offset and at every text scale. Nothing here clamps the text
-            // scaler the way the landing screen has to: this screen scrolls, so
-            // 200% text makes it longer rather than making Home unreachable.
-            Expanded(
-              child: AnimatedSwitcher(
-                // A tab is a screen the reader crossed to, so crossing to it
-                // costs what crossing to one costs: the same 420ms fade every
-                // route in this app is pushed on.
-                //
-                // The outgoing panel is the half that was missing. The incoming
-                // one always animated — each panel is its own widget type, so
-                // switching tabs unmounts the old and mounts a new [BrewSheet]
-                // whose [StaggerGroup] plays from zero — but the old panel simply
-                // stopped existing on the frame the new one appeared. Half a
-                // transition reads worse than none: content rising into place
-                // over something that vanished.
-                //
-                // Fading a route in while the screen inside it staggers is
-                // already this app's grammar — see [LoginScreen.route], where the
-                // 420ms fade and the form's own entrance overlap by design. This
-                // is that, for the three destinations that are not routes.
-                duration: reduced ? Duration.zero : BrewMotion.transit,
-                switchInCurve: BrewMotion.crossFadeCurve,
-                switchOutCurve: BrewMotion.crossFadeCurve,
-                // The default centres its children under loose constraints,
-                // which would hand a scroll view a viewport the height of its own
-                // content and let the two panels change size under the crossfade.
-                // Expanded, so both are laid out in exactly the box they occupy
-                // alone.
-                layoutBuilder: (current, previous) => Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // The panel on its way out is still mounted for the length
-                    // of the fade, and for that time it must be neither
-                    // touchable nor readable: it is under the incoming one, so a
-                    // press landing in a gap between the new panel's elements
-                    // would otherwise reach the old panel's control, and a screen
-                    // reader would be handed two tabs' worth of content at once.
-                    // The same pair of guards the splash holds over the landing
-                    // screen, for the same reason.
-                    for (final child in previous)
-                      ExcludeSemantics(child: IgnorePointer(child: child)),
-                    ?current,
-                  ],
+              // The nav is outside the scroll view, so it is on the screen at every
+              // scroll offset and at every text scale. Nothing here clamps the text
+              // scaler the way the landing screen has to: this screen scrolls, so
+              // 200% text makes it longer rather than making Home unreachable.
+              Expanded(
+                child: AnimatedSwitcher(
+                  // A tab is a screen the reader crossed to, so crossing to it
+                  // costs what crossing to one costs: the same 420ms fade every
+                  // route in this app is pushed on.
+                  //
+                  // The outgoing panel is the half that was missing. The incoming
+                  // one always animated — each panel is its own widget type, so
+                  // switching tabs unmounts the old and mounts a new [BrewSheet]
+                  // whose [StaggerGroup] plays from zero — but the old panel simply
+                  // stopped existing on the frame the new one appeared. Half a
+                  // transition reads worse than none: content rising into place
+                  // over something that vanished.
+                  //
+                  // Fading a route in while the screen inside it staggers is
+                  // already this app's grammar — see [LoginScreen.route], where the
+                  // 420ms fade and the form's own entrance overlap by design. This
+                  // is that, for the three destinations that are not routes.
+                  duration: reduced ? Duration.zero : BrewMotion.tabTransition,
+                  switchInCurve: BrewMotion.crossFadeCurve,
+                  switchOutCurve: BrewMotion.crossFadeCurve,
+                  transitionBuilder: (child, animation) {
+                    final curved = CurvedAnimation(
+                      parent: animation,
+                      curve: BrewMotion.crossFadeCurve,
+                    );
+                    return FadeTransition(
+                      opacity: curved,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, 0.018),
+                          end: Offset.zero,
+                        ).animate(curved),
+                        child: child,
+                      ),
+                    );
+                  },
+                  // The default centres its children under loose constraints,
+                  // which would hand a scroll view a viewport the height of its own
+                  // content and let the two panels change size under the crossfade.
+                  // Expanded, so both are laid out in exactly the box they occupy
+                  // alone.
+                  layoutBuilder: (current, previous) => Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // The panel on its way out is still mounted for the length
+                      // of the fade, and for that time it must be neither
+                      // touchable nor readable: it is under the incoming one, so a
+                      // press landing in a gap between the new panel's elements
+                      // would otherwise reach the old panel's control, and a screen
+                      // reader would be handed two tabs' worth of content at once.
+                      // The same pair of guards the splash holds over the landing
+                      // screen, for the same reason.
+                      for (final child in previous)
+                        ExcludeSemantics(child: IgnorePointer(child: child)),
+                      ?current,
+                    ],
+                  ),
+                  child: _body(compact),
                 ),
-                child: _body(compact),
               ),
-            ),
-            _BrewNav(
-              current: _notices ? null : _tab,
-              onSelect: _select,
-              bottomInset: media.padding.bottom,
-            ),
-          ],
+              _BrewNav(
+                current: _notices ? null : _tab,
+                onSelect: _select,
+                bottomInset: media.padding.bottom,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   /// Which panel is under the nav.
@@ -394,9 +431,17 @@ class _HomeScreenState extends State<HomeScreen> {
         orders: _orders,
         seenNotices: _seenNotices,
         onViewMenu: widget.onViewMenu,
+        onViewWholeMenu: _openWholeMenu,
         onNotices: () => setState(() => _notices = true),
         onProfile: () => _select(BrewTab.profile),
         onTrackOrder: _openTracking,
+      ),
+      BrewTab.favorites => FavoritesPanel(
+        compact: compact,
+        session: widget.session,
+        counter: widget.counter,
+        shops: _shops,
+        onBrowseShops: () => _select(BrewTab.home),
       ),
       BrewTab.orders => OrdersPanel(
         compact: compact,
@@ -432,6 +477,7 @@ class _HomePanel extends StatelessWidget {
     required this.orders,
     required this.seenNotices,
     required this.onViewMenu,
+    this.onViewWholeMenu,
     required this.onNotices,
     required this.onProfile,
     required this.onTrackOrder,
@@ -464,6 +510,7 @@ class _HomePanel extends StatelessWidget {
   final Set<String> seenNotices;
 
   final void Function(BrewShop shop)? onViewMenu;
+  final void Function(BrewShop shop)? onViewWholeMenu;
   final VoidCallback onNotices;
   final VoidCallback onProfile;
 
@@ -500,7 +547,8 @@ class _HomePanel extends StatelessWidget {
               stream: shops,
               initialData: knownShops,
               builder: (context, shopsSnapshot) {
-                final both = shopsSnapshot.data ??
+                final both =
+                    shopsSnapshot.data ??
                     (shops == null ? BrewShop.unavailable : BrewShop.pending);
                 return _sheet(
                   activeOrders: activeOrders,
@@ -706,6 +754,9 @@ class _HomePanel extends StatelessWidget {
             child: _ShopCard(
               shop: shop,
               onViewMenu: onViewMenu == null ? null : () => onViewMenu!(shop),
+              onViewWholeMenu: onViewWholeMenu == null
+                  ? null
+                  : () => onViewWholeMenu!(shop),
             ),
           ),
         ],
@@ -816,7 +867,9 @@ class _HeaderActionButtonState extends State<_HeaderActionButton> {
             onTapUp: (_) => setState(() => _pressed = false),
             onTapCancel: () => setState(() => _pressed = false),
             child: AnimatedScale(
-              duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+              duration: reduced
+                  ? Duration.zero
+                  : const Duration(milliseconds: 140),
               curve: Curves.easeOutCubic,
               scale: _pressed ? 0.94 : (_hovered ? 1.05 : 1.0),
               child: Stack(
@@ -830,8 +883,8 @@ class _HeaderActionButtonState extends State<_HeaderActionButton> {
                       color: _pressed
                           ? const Color(0xF5182D20)
                           : (_hovered
-                              ? BrewColor.cream.withValues(alpha: 0.12)
-                              : const Color(0xEB132218)),
+                                ? BrewColor.cream.withValues(alpha: 0.12)
+                                : const Color(0xEB132218)),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: _hovered
@@ -850,11 +903,17 @@ class _HeaderActionButtonState extends State<_HeaderActionButton> {
                       top: -1,
                       right: -1,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: BrewColor.alert,
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: const Color(0xFF132218), width: 1.5),
+                          border: Border.all(
+                            color: const Color(0xFF132218),
+                            width: 1.5,
+                          ),
                         ),
                         child: Text(
                           widget.badgeCount > 9 ? '9+' : '${widget.badgeCount}',
@@ -877,10 +936,7 @@ class _HeaderActionButtonState extends State<_HeaderActionButton> {
 }
 
 class _ProfileHeaderButton extends StatefulWidget {
-  const _ProfileHeaderButton({
-    required this.session,
-    required this.onPressed,
-  });
+  const _ProfileHeaderButton({required this.session, required this.onPressed});
 
   final BrewSession session;
   final VoidCallback onPressed;
@@ -925,7 +981,9 @@ class _ProfileHeaderButtonState extends State<_ProfileHeaderButton> {
           onTapUp: (_) => setState(() => _pressed = false),
           onTapCancel: () => setState(() => _pressed = false),
           child: AnimatedScale(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             scale: _pressed ? 0.94 : (_hovered ? 1.05 : 1.0),
             child: Container(
@@ -936,8 +994,8 @@ class _ProfileHeaderButtonState extends State<_ProfileHeaderButton> {
                 color: _pressed
                     ? const Color(0xF5182D20)
                     : (_hovered
-                        ? BrewColor.sage.withValues(alpha: 0.3)
-                        : const Color(0xEB132218)),
+                          ? BrewColor.sage.withValues(alpha: 0.3)
+                          : const Color(0xEB132218)),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: _hovered
@@ -1007,10 +1065,11 @@ class _SectionLabel extends StatelessWidget {
 
 /// One partner, elevated as a frosted luxury control.
 class _ShopCard extends StatefulWidget {
-  const _ShopCard({required this.shop, this.onViewMenu});
+  const _ShopCard({required this.shop, this.onViewMenu, this.onViewWholeMenu});
 
   final BrewShop shop;
   final VoidCallback? onViewMenu;
+  final VoidCallback? onViewWholeMenu;
 
   @override
   State<_ShopCard> createState() => _ShopCardState();
@@ -1048,7 +1107,9 @@ class _ShopCardState extends State<_ShopCard> {
             onTapUp: (_) => setState(() => _pressed = false),
             onTapCancel: () => setState(() => _pressed = false),
             child: AnimatedScale(
-              duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+              duration: reduced
+                  ? Duration.zero
+                  : const Duration(milliseconds: 140),
               curve: Curves.easeOutCubic,
               scale: _pressed ? 0.985 : (_hovered ? 1.012 : 1.0),
               child: AnimatedContainer(
@@ -1059,15 +1120,15 @@ class _ShopCardState extends State<_ShopCard> {
                   color: _pressed
                       ? const Color(0xF5182D20)
                       : (_hovered
-                          ? const Color(0xF216271C)
-                          : const Color(0xEB132218)),
+                            ? const Color(0xF216271C)
+                            : const Color(0xEB132218)),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _pressed
                         ? BrewColor.fieldFocus
                         : (_hovered
-                            ? BrewColor.cream.withValues(alpha: 0.28)
-                            : BrewColor.cream.withValues(alpha: 0.14)),
+                              ? BrewColor.cream.withValues(alpha: 0.28)
+                              : BrewColor.cream.withValues(alpha: 0.14)),
                     width: 1.0,
                   ),
                   boxShadow: [
@@ -1103,7 +1164,10 @@ class _ShopCardState extends State<_ShopCard> {
                           ),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(11),
-                            child: BrewShopMark(shop: shop, dimension: _markSize),
+                            child: BrewShopMark(
+                              shop: shop,
+                              dimension: _markSize,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 14),
@@ -1125,7 +1189,9 @@ class _ShopCardState extends State<_ShopCard> {
                                 child: Text(
                                   shop.displayDescription,
                                   style: BrewType.rowBody.copyWith(
-                                    color: BrewColor.cream.withValues(alpha: 0.72),
+                                    color: BrewColor.cream.withValues(
+                                      alpha: 0.72,
+                                    ),
                                     height: 1.35,
                                     fontSize: 13,
                                   ),
@@ -1139,23 +1205,26 @@ class _ShopCardState extends State<_ShopCard> {
                       ],
                     ),
                     const SizedBox(height: BrewSpace.grid * 2),
+                    _StatusBar(status: status),
+                    const SizedBox(height: BrewSpace.grid),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Flexible(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: _StatusMark(status: status),
+                        Expanded(
+                          child: _CardAction(
+                            label: 'View whole menu',
+                            icon: Icons.menu_book_rounded,
+                            onTap: widget.onViewWholeMenu,
+                            reduced: reduced,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: _ViewMenuPill(
-                            hovered: _hovered,
-                            pressed: _pressed,
+                        const SizedBox(width: BrewSpace.grid),
+                        Expanded(
+                          child: _CardAction(
+                            label: 'View menu',
+                            icon: Icons.format_list_bulleted_rounded,
+                            onTap: widget.onViewMenu,
                             reduced: reduced,
+                            primary: true,
                           ),
                         ),
                       ],
@@ -1171,61 +1240,15 @@ class _ShopCardState extends State<_ShopCard> {
   }
 }
 
-class _ViewMenuPill extends StatelessWidget {
-  const _ViewMenuPill({
-    required this.hovered,
-    required this.pressed,
-    required this.reduced,
-  });
-
-  final bool hovered;
-  final bool pressed;
-  final bool reduced;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
-      curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6.5),
-      decoration: BoxDecoration(
-        color: pressed
-            ? BrewColor.cream.withValues(alpha: 0.22)
-            : (hovered
-                ? BrewColor.cream.withValues(alpha: 0.16)
-                : BrewColor.cream.withValues(alpha: 0.09)),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: hovered
-              ? BrewColor.cream.withValues(alpha: 0.35)
-              : BrewColor.cream.withValues(alpha: 0.16),
-          width: 0.9,
-        ),
-        boxShadow: hovered
-            ? [
-                BoxShadow(
-                  color: BrewColor.cream.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                ),
-              ]
-            : null,
-      ),
-      child: Text(
-        'View menu →',
-        style: BrewType.mono.copyWith(
-          fontSize: 10,
-          letterSpacing: 1.1,
-          fontWeight: FontWeight.w700,
-          color: BrewColor.cream,
-        ),
-      ),
-    );
-  }
-}
-
-/// Open, closed, or pending: illuminated capsule.
-class _StatusMark extends StatelessWidget {
-  const _StatusMark({required this.status});
+/// Open, closed, or pending, as the card's lead line.
+///
+/// Full width and drawn like a control, because it is the first thing a reader
+/// checks — can I order from here? — and it points the same way the card does.
+/// It is not separately pressable: it takes the card's press, exactly as the
+/// Track order button on [_OrderCard] does, so there is one hit target for one
+/// destination.
+class _StatusBar extends StatelessWidget {
+  const _StatusBar({required this.status});
 
   final BrewShopStatus status;
 
@@ -1234,65 +1257,157 @@ class _StatusMark extends StatelessWidget {
     final open = status == BrewShopStatus.open;
     final pending = status == BrewShopStatus.pending;
 
-    final Color pillBg;
-    final Color pillBorder;
-    final Color dotColor;
-    final Color textColor;
+    final Color fill;
+    final Color border;
+    final Color ink;
 
     if (open) {
-      pillBg = BrewColor.sage.withValues(alpha: 0.2);
-      pillBorder = BrewColor.sageLight.withValues(alpha: 0.4);
-      dotColor = BrewColor.sageLight;
-      textColor = BrewColor.sageLight;
+      fill = BrewColor.sage.withValues(alpha: 0.22);
+      border = BrewColor.sageLight.withValues(alpha: 0.4);
+      ink = BrewColor.sageLight;
     } else if (pending) {
-      pillBg = BrewColor.cream.withValues(alpha: 0.08);
-      pillBorder = BrewColor.cream.withValues(alpha: 0.15);
-      dotColor = BrewColor.loading;
-      textColor = BrewColor.loading;
+      fill = BrewColor.cream.withValues(alpha: 0.06);
+      border = BrewColor.cream.withValues(alpha: 0.15);
+      ink = BrewColor.loading;
     } else {
-      pillBg = BrewColor.alert.withValues(alpha: 0.15);
-      pillBorder = BrewColor.alert.withValues(alpha: 0.3);
-      dotColor = BrewColor.alert;
-      textColor = BrewColor.alert;
+      fill = BrewColor.alert.withValues(alpha: 0.12);
+      border = BrewColor.alert.withValues(alpha: 0.3);
+      ink = BrewColor.alert;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+      height: _kCardActionHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        color: pillBg,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: pillBorder, width: 0.8),
+        color: fill,
+        borderRadius: BorderRadius.circular(_kCardActionRadius),
+        border: Border.all(color: border, width: 0.9),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 5.5,
-            height: 5.5,
-            decoration: BoxDecoration(
-              color: dotColor,
-              shape: BoxShape.circle,
-              boxShadow: open
-                  ? [
-                      BoxShadow(
-                        color: BrewColor.sageLight.withValues(alpha: 0.6),
-                        blurRadius: 4,
-                      ),
-                    ]
-                  : null,
+          Icon(Icons.storefront_rounded, size: 18, color: ink),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              status.label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: BrewType.mono.copyWith(
+                fontSize: 11,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w700,
+                color: ink,
+              ),
             ),
           ),
-          const SizedBox(width: 5.5),
-          Text(
-            status.label.toUpperCase(),
-            style: BrewType.mono.copyWith(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.9,
-              color: textColor,
-            ),
-          ),
+          Icon(Icons.arrow_forward_rounded, size: 16, color: ink),
         ],
+      ),
+    );
+  }
+}
+
+const _kCardActionHeight = 44.0;
+
+/// Nested inside the card's 16px corner, so a step tighter than it.
+const _kCardActionRadius = 10.0;
+
+/// The two destinations under the status bar: the shop's whole menu as posters,
+/// and its orderable menu.
+///
+/// Both are real buttons with their own tap. [primary] only changes weight —
+/// the orderable menu is the one a reader came for, so it carries a cream tint
+/// and a trailing arrow where the whole-menu button stays a hairline outline.
+class _CardAction extends StatefulWidget {
+  const _CardAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    required this.reduced,
+    this.primary = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool reduced;
+  final bool primary;
+
+  @override
+  State<_CardAction> createState() => _CardActionState();
+}
+
+class _CardActionState extends State<_CardAction> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = widget.primary;
+    final ink = primary
+        ? BrewColor.cream
+        : BrewColor.cream.withValues(alpha: 0.86);
+    final iconInk = primary ? BrewColor.cream : BrewColor.sageLight;
+
+    final fill = _pressed
+        ? BrewColor.cream.withValues(alpha: primary ? 0.2 : 0.12)
+        : (_hovered
+              ? BrewColor.cream.withValues(alpha: primary ? 0.15 : 0.08)
+              : BrewColor.cream.withValues(alpha: primary ? 0.1 : 0.03));
+    final border = BrewColor.cream.withValues(
+      alpha: _pressed ? 0.4 : (_hovered ? 0.3 : (primary ? 0.24 : 0.16)),
+    );
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          widget.onTap?.call();
+        },
+        child: AnimatedContainer(
+          duration: widget.reduced ? Duration.zero : BrewMotion.press,
+          curve: BrewMotion.pressCurve,
+          height: _kCardActionHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(_kCardActionRadius),
+            border: Border.all(color: border, width: 0.9),
+          ),
+          // Scales down rather than ellipsising: a button whose label loses its
+          // last word on a 320px phone no longer says where it goes.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon, size: 16, color: iconInk),
+                const SizedBox(width: 7),
+                Text(
+                  widget.label,
+                  maxLines: 1,
+                  style: BrewType.bodyMedium.copyWith(
+                    fontSize: 13,
+                    height: 1.2,
+                    color: ink,
+                    fontVariations: const [FontVariation('wght', 600)],
+                  ),
+                ),
+                if (primary) ...[
+                  const SizedBox(width: 6),
+                  Icon(Icons.arrow_forward_rounded, size: 14, color: ink),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1655,7 +1770,8 @@ class _NoticesPanel extends StatelessWidget {
   static bool _isNotice(BrewOrderStage stage) => switch (stage) {
     BrewOrderStage.ready ||
     BrewOrderStage.completed ||
-    BrewOrderStage.rejected => true,
+    BrewOrderStage.rejected ||
+    BrewOrderStage.cancelled => true,
     BrewOrderStage.received || BrewOrderStage.preparing => false,
   };
 
@@ -1757,7 +1873,10 @@ class _NoticesPanel extends StatelessWidget {
           for (final (index, order) in notices.indexed)
             StaggerItem(
               index: noticeSlots[index],
-              child: _NoticeRow(order: order, isLast: index == notices.length - 1),
+              child: _NoticeRow(
+                order: order,
+                isLast: index == notices.length - 1,
+              ),
             ),
       ],
     );
@@ -1786,8 +1905,10 @@ class _NoticeRow extends StatelessWidget {
       null => '${order.shopName} declined your order.',
     },
     // Neither reachable here — `notices` only ever holds inactive orders —
-    // but `BrewOrderStage` has five values and a switch over it is exhaustive
+    // but `BrewOrderStage` has six values and a switch over it is exhaustive
     // by the analyser's own rule, not by this class's.
+    BrewOrderStage.cancelled =>
+      'Your order from ${order.shopName} was cancelled.',
     BrewOrderStage.received || BrewOrderStage.preparing => order.stage.label,
   };
 
@@ -1797,8 +1918,9 @@ class _NoticeRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: BrewColor.hairline),
-          bottom:
-              isLast ? BorderSide(color: BrewColor.hairline) : BorderSide.none,
+          bottom: isLast
+              ? BorderSide(color: BrewColor.hairline)
+              : BorderSide.none,
         ),
       ),
       padding: const EdgeInsets.symmetric(vertical: BrewSpace.rowPadding),
@@ -1812,7 +1934,10 @@ class _NoticeRow extends StatelessWidget {
                 : BrewType.rowBody,
           ),
           const SizedBox(height: 4),
-          Text(order.itemLine, style: BrewType.rowBody.copyWith(color: BrewColor.loading)),
+          Text(
+            order.itemLine,
+            style: BrewType.rowBody.copyWith(color: BrewColor.loading),
+          ),
         ],
       ),
     );
@@ -1905,6 +2030,8 @@ class _NavItemState extends State<_NavItem> {
 
   IconData _iconFor(BrewTab tab, bool selected) => switch (tab) {
     BrewTab.home => selected ? Icons.home_rounded : Icons.home_outlined,
+    BrewTab.favorites =>
+      selected ? Icons.favorite_rounded : Icons.favorite_border_rounded,
     BrewTab.orders =>
       selected ? Icons.receipt_long_rounded : Icons.receipt_long_outlined,
     BrewTab.profile =>
@@ -1959,16 +2086,24 @@ class _NavItemState extends State<_NavItem> {
                 ),
               ),
               const SizedBox(height: 3),
-              AnimatedDefaultTextStyle(
-                duration: reduced ? Duration.zero : BrewMotion.press,
-                curve: BrewMotion.pressCurve,
-                style: BrewType.mono.copyWith(
-                  fontSize: 10,
-                  fontWeight: widget.selected ? FontWeight.w700 : FontWeight.w500,
-                  letterSpacing: 0.9,
-                  color: ink,
+              SizedBox(
+                height: 18,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: AnimatedDefaultTextStyle(
+                    duration: reduced ? Duration.zero : BrewMotion.press,
+                    curve: BrewMotion.pressCurve,
+                    style: BrewType.mono.copyWith(
+                      fontSize: 10,
+                      fontWeight: widget.selected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      letterSpacing: 0.9,
+                      color: ink,
+                    ),
+                    child: Text(widget.tab.label.toUpperCase()),
+                  ),
                 ),
-                child: Text(widget.tab.label.toUpperCase()),
               ),
               const Spacer(),
             ],

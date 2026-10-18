@@ -7,10 +7,13 @@
   <meta name="description" content="QuickBrew Official Website Administration Console. Manage APK releases, download statistics, landing page content, and announcements.">
   <link rel="icon" type="image/png" href="assets/app_icon.png">
 
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+
   <!-- Typography: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Firebase App & Services Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -20,6 +23,57 @@
   <link rel="stylesheet" href="admin.css">
 </head>
 <body>
+
+  <!-- ========================================================================
+       0. Security Lockdown & IP Block Screen (Brute Force / Bypass Intercept)
+       ======================================================================== -->
+  <div class="security-lockdown-screen" id="securityLockdownScreen" style="display: none;">
+    <div class="lockdown-ambient-glow"></div>
+    <div class="lockdown-card">
+      <div class="lockdown-icon-wrapper">
+        <div class="lockdown-siren-ring"></div>
+        <svg class="lockdown-shield-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div class="lockdown-badge">SECURITY BREACH INTERCEPTED</div>
+      <h1 class="lockdown-title">ACCESS TERMINATED &amp; IP BLOCKED</h1>
+      <p class="lockdown-desc" id="lockdownReason">
+        Multiple unauthorized authentication failures or administrative privilege escalation attempts were detected. Your network IP and device identity have been quarantined.
+      </p>
+
+      <div class="lockdown-timer-box">
+        <div class="lockdown-timer-label">LOCKOUT COOLDOWN ACTIVE</div>
+        <div class="lockdown-countdown" id="lockdownCountdown">29:59</div>
+        <div class="lockdown-timer-sub">Administrative gateway is strictly offline for this address</div>
+      </div>
+
+      <div class="lockdown-details-panel">
+        <div class="detail-row">
+          <span class="detail-label">INCIDENT REF:</span>
+          <span class="detail-val mono red" id="lockdownIncidentId">SEC-BLK-INIT-0000</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">FIREWALL STATUS:</span>
+          <span class="detail-val mono red">IP BLACKLISTED / ACCESS REVOKED</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">GATEWAY DEFENSE:</span>
+          <span class="detail-val mono">RATE LIMITER &amp; ANTI-BYPASS ACTIVE</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">AUDIT LOG:</span>
+          <span class="detail-val mono">EVENT TELEMETRY COMMITTED</span>
+        </div>
+      </div>
+
+      <div class="lockdown-actions">
+        <a href="index.html" class="btn-lockdown-exit">&larr; Return to Public Website</a>
+      </div>
+    </div>
+  </div>
 
   <!-- ========================================================================
        1. Login Screen (Unauthenticated)
@@ -61,6 +115,12 @@
             <span>Sign In to Web Admin</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
+
+          <!-- Security Rate Limiter & Shield Indicator -->
+          <div class="login-security-indicator" id="loginSecurityIndicator">
+            <span class="security-dot" id="securityDot"></span>
+            <span class="security-text" id="loginAttemptsStatus">Firewall Active &bull; 5 Attempts Remaining</span>
+          </div>
         </form>
 
         <div class="login-back-link">
@@ -164,7 +224,7 @@
             </div>
           </div>
           <div class="metric-val" style="font-size: 1.6rem;" id="metricVersion">v1.0.0</div>
-          <div class="metric-sub" id="metricApkSub">55.1 MB &bull; Android 6.0+</div>
+          <div class="metric-sub" id="metricApkSub">59.2 MB &bull; Android 7.0+</div>
         </div>
 
         <div class="metric-card">
@@ -494,11 +554,11 @@
             <div class="admin-grid-2col">
               <div class="form-group">
                 <label class="form-label">Reported File Size</label>
-                <input type="text" id="cfgApkSize" class="form-control" value="55.1 MB" required>
+                <input type="text" id="cfgApkSize" class="form-control" value="59.2 MB" required>
               </div>
               <div class="form-group">
                 <label class="form-label">Minimum Android Version</label>
-                <input type="text" id="cfgMinAndroid" class="form-control" value="Android 6.0+ (Marshmallow)" required>
+                <input type="text" id="cfgMinAndroid" class="form-control" value="Android 7.0+ (Nougat)" required>
               </div>
             </div>
 

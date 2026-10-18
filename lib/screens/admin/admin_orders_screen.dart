@@ -23,10 +23,10 @@ import 'admin_transitions.dart';
 /// Completed section below, which has no filter of its own to hide behind.
 const _kAllPhases = 'All';
 List<String> get _phaseOptions => [
-      _kAllPhases,
-      for (final stage in BrewOrderStage.values)
-        if (stage.isActive) stage.label,
-    ];
+  _kAllPhases,
+  for (final stage in BrewOrderStage.values)
+    if (stage.isActive) stage.label,
+];
 
 /// One store's queue, admin side: every order it has taken, and the one
 /// place an order moves from received to ready to completed.
@@ -36,11 +36,7 @@ List<String> get _phaseOptions => [
 /// has to query across partners — a store's counter staff only ever cares about
 /// the line in front of them.
 class AdminOrdersScreen extends StatefulWidget {
-  const AdminOrdersScreen({
-    super.key,
-    required this.partner,
-    this.admin,
-  });
+  const AdminOrdersScreen({super.key, required this.partner, this.admin});
 
   final BrewPartner partner;
 
@@ -183,16 +179,15 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
           stream: _orders,
           initialData: [order],
           builder: (context, snapshot) {
-            final current = (snapshot.data ?? const <BrewOrder>[])
+            final current =
+                (snapshot.data ?? const <BrewOrder>[])
                     .where((candidate) => candidate.id == order.id)
                     .firstOrNull ??
                 order;
             return _OrderDetailSheet(
               order: current,
               busy: _busy.contains(current.id),
-              onAdvance: widget.admin == null
-                  ? null
-                  : () => _advance(current),
+              onAdvance: widget.admin == null ? null : () => _advance(current),
               // Only an active order — not completed or already rejected — has
               // anywhere to be rejected from. The drink behind a completed
               // one is already made, and a rejected one is already rejected.
@@ -224,11 +219,8 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         child: BrewBackground(
           child: StreamBuilder<List<BrewOrder>>(
             stream: _orders,
-            builder: (context, snapshot) => _sheet(
-              context,
-              compact: compact,
-              orders: snapshot.data,
-            ),
+            builder: (context, snapshot) =>
+                _sheet(context, compact: compact, orders: snapshot.data),
           ),
         ),
       ),
@@ -249,16 +241,17 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
         if (_phaseFilter == _kAllPhases || order.stage.label == _phaseFilter)
           order,
     ];
-    final completed = [
-      for (final order in orders ?? const <BrewOrder>[])
-        if (!order.stage.isActive) order,
-    ]..sort((a, b) {
-        final (left, right) = (a.placedAt, b.placedAt);
-        if (left == null && right == null) return 0;
-        if (left == null) return -1;
-        if (right == null) return 1;
-        return right.compareTo(left);
-      });
+    final completed =
+        [
+          for (final order in orders ?? const <BrewOrder>[])
+            if (!order.stage.isActive) order,
+        ]..sort((a, b) {
+          final (left, right) = (a.placedAt, b.placedAt);
+          if (left == null && right == null) return 0;
+          if (left == null) return -1;
+          if (right == null) return 1;
+          return right.compareTo(left);
+        });
 
     // The same running-counter idiom orders_panel.dart uses: every slot is
     // allocated in the order the rows are actually built, so a stagger index
@@ -275,11 +268,15 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     final activeLabel = slot();
     final activeFilter = orders != null && active.isNotEmpty ? slot() : null;
     final activeRowSlots = [
-      if (orders != null) for (final _ in visibleActive) slot(),
+      if (orders != null)
+        for (final _ in visibleActive) slot(),
     ];
-    final completedLabel = orders != null && completed.isNotEmpty ? slot() : null;
+    final completedLabel = orders != null && completed.isNotEmpty
+        ? slot()
+        : null;
     final completedRowSlots = [
-      if (completedLabel != null) for (final _ in completed) slot(),
+      if (completedLabel != null)
+        for (final _ in completed) slot(),
     ];
     final staggerCount = math.max(1, next);
 
@@ -337,10 +334,7 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
             style: BrewType.rowBody,
           )
         else if (visibleActive.isEmpty)
-          Text(
-            'No orders in this phase right now.',
-            style: BrewType.rowBody,
-          )
+          Text('No orders in this phase right now.', style: BrewType.rowBody)
         else
           for (final (index, order) in visibleActive.indexed)
             StaggerItem(
@@ -414,12 +408,13 @@ class _SectionLabel extends StatelessWidget {
 /// rather than a generic "Next" — the same reason the order wizard's own
 /// forward button changes its label on every step.
 String _actionLabel(BrewOrderStage next) => switch (next) {
-      BrewOrderStage.preparing => 'Start preparing',
-      BrewOrderStage.ready => 'Mark ready',
-      BrewOrderStage.completed => 'Mark completed',
-      BrewOrderStage.received => 'Advance',
-      BrewOrderStage.rejected => 'Reject',
-    };
+  BrewOrderStage.preparing => 'Start preparing',
+  BrewOrderStage.ready => 'Mark ready',
+  BrewOrderStage.completed => 'Mark completed',
+  BrewOrderStage.received => 'Advance',
+  BrewOrderStage.rejected => 'Reject',
+  BrewOrderStage.cancelled => 'Cancelled',
+};
 
 /// An order's stage as the ink the whole screen shows it in — the active mono
 /// voice for anything still moving, the loading grey [orders_panel.dart]
@@ -427,10 +422,10 @@ String _actionLabel(BrewOrderStage next) => switch (next) {
 /// rejected one, since that is the one outcome here that is a problem for
 /// somebody rather than a step in the ordinary flow.
 TextStyle _stageStyle(BrewOrderStage stage) => switch (stage) {
-      BrewOrderStage.rejected => BrewType.mono.copyWith(color: BrewColor.alert),
-      final stage when stage.isActive => BrewType.mono,
-      _ => BrewType.mono.copyWith(color: BrewColor.loading),
-    };
+  BrewOrderStage.rejected => BrewType.mono.copyWith(color: BrewColor.alert),
+  final stage when stage.isActive => BrewType.mono,
+  _ => BrewType.mono.copyWith(color: BrewColor.loading),
+};
 
 /// One order, summarised: who it is for, what is in it, what it comes to, and
 /// its current stage. Tapping it opens [_OrderDetailSheet], where the rest of
@@ -467,8 +462,7 @@ class _OrderRowState extends State<_OrderRow> {
       radius: 0,
       pressed: _pressed,
       reduced: reduced,
-      semanticsLabel:
-          '$displayName. ${order.stage.label}. View order details.',
+      semanticsLabel: '$displayName. ${order.stage.label}. View order details.',
       child: ExcludeSemantics(
         child: Container(
           decoration: BoxDecoration(
@@ -480,9 +474,7 @@ class _OrderRowState extends State<_OrderRow> {
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Text(displayName, style: BrewType.rowTitle),
-                  ),
+                  Expanded(child: Text(displayName, style: BrewType.rowTitle)),
                   const SizedBox(width: BrewSpace.grid),
                   Text(
                     order.stage.label.toUpperCase(),
@@ -691,10 +683,8 @@ class _OrderDetailSheet extends StatelessWidget {
             // off the end of the sheet.
             height: 280,
             alignment: Alignment.topCenter,
-            errorBuilder: (context, error, stack) => Text(
-              'That picture will not open.',
-              style: BrewType.rowBody,
-            ),
+            errorBuilder: (context, error, stack) =>
+                Text('That picture will not open.', style: BrewType.rowBody),
           ),
         ),
       ],
@@ -787,11 +777,7 @@ class _DetailLabel extends StatelessWidget {
 /// one — and a bounded block is for a known set of fields that belong
 /// together. Every card here is the latter.
 class _DetailCard extends StatelessWidget {
-  const _DetailCard({
-    required this.label,
-    required this.children,
-    this.ink,
-  });
+  const _DetailCard({required this.label, required this.children, this.ink});
 
   final String label;
   final List<Widget> children;
@@ -829,11 +815,11 @@ class _DetailCard extends StatelessWidget {
 /// whether anything before it survived, which is exactly the arithmetic the
 /// stagger slots on this screen avoid for the same reason.
 List<Widget> _ruled(List<Widget> rows) => [
-      for (final (index, row) in rows.indexed) ...[
-        if (index > 0) const _CardRule(),
-        row,
-      ],
-    ];
+  for (final (index, row) in rows.indexed) ...[
+    if (index > 0) const _CardRule(),
+    row,
+  ],
+];
 
 /// A full-width hairline between two rows inside a card.
 class _CardRule extends StatelessWidget {
@@ -912,7 +898,8 @@ class _RejectSheetState extends State<_RejectSheet> {
         left: BrewSpace.gutter,
         right: BrewSpace.gutter,
         top: BrewSpace.grid * 3,
-        bottom: media.viewInsets.bottom + media.padding.bottom + BrewSpace.grid * 4,
+        bottom:
+            media.viewInsets.bottom + media.padding.bottom + BrewSpace.grid * 4,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

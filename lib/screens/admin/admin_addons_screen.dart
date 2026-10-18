@@ -143,7 +143,8 @@ class _AdminAddOnsScreenState extends State<AdminAddOnsScreen> {
       backgroundColor: BrewColor.field,
       builder: (context) => _ConfirmAddOnSheet(
         title: 'Replace the add-ons?',
-        body: 'This removes every add-on this shop offers and puts '
+        body:
+            'This removes every add-on this shop offers and puts '
             '${seed.length} in their place. Anything typed by hand goes with '
             'it. The other shop is not touched.',
         confirmLabel: 'Replace with ${seed.length} add-ons',
@@ -175,7 +176,8 @@ class _AdminAddOnsScreenState extends State<AdminAddOnsScreen> {
       backgroundColor: BrewColor.field,
       builder: (context) => _ConfirmAddOnSheet(
         title: 'Remove every add-on?',
-        body: 'This takes all $count off this shop. Customers will not be '
+        body:
+            'This takes all $count off this shop. Customers will not be '
             'offered any extras until something is added back.',
         confirmLabel: 'Remove all $count',
       ),
@@ -212,33 +214,33 @@ class _AdminAddOnsScreenState extends State<AdminAddOnsScreen> {
         child: BrewBackground(
           child: BrewSheet(
             staggerCount: 4,
-          children: [
-            StaggerItem(index: 0, child: _header(context)),
-            SizedBox(height: brewBlockGap(compact)),
-            StaggerItem(
-              index: 1,
-              child: Text(
-                widget.partner.name,
-                style: BrewType.displayAt(compact ? 28 : 34),
+            children: [
+              StaggerItem(index: 0, child: _header(context)),
+              SizedBox(height: brewBlockGap(compact)),
+              StaggerItem(
+                index: 1,
+                child: Text(
+                  widget.partner.name,
+                  style: BrewType.displayAt(compact ? 28 : 34),
+                ),
               ),
-            ),
-            const SizedBox(height: BrewSpace.grid),
-            StaggerItem(
-              index: 2,
-              child: Text(
-                'What this shop will add to a drink, and what it charges. '
-                'These belong to this shop alone.',
-                style: BrewType.rowBody,
+              const SizedBox(height: BrewSpace.grid),
+              StaggerItem(
+                index: 2,
+                child: Text(
+                  'What this shop will add to a drink, and what it charges. '
+                  'These belong to this shop alone.',
+                  style: BrewType.rowBody,
+                ),
               ),
-            ),
-            SizedBox(height: brewBlockGap(compact)),
-            StaggerItem(index: 3, child: _list(context)),
-          ],
+              SizedBox(height: brewBlockGap(compact)),
+              StaggerItem(index: 3, child: _list(context)),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _header(BuildContext context) {
     return Row(
@@ -263,8 +265,9 @@ class _AdminAddOnsScreenState extends State<AdminAddOnsScreen> {
             const Expanded(child: _SectionLabel('Add-ons')),
             BrewMonoButton(
               label: 'Add an add-on',
-              onPressed:
-                  widget.admin == null ? null : () => _editSheet(context),
+              onPressed: widget.admin == null
+                  ? null
+                  : () => _editSheet(context),
             ),
           ],
         ),
@@ -463,36 +466,60 @@ class _AddOnRow extends StatelessWidget {
         border: Border.all(color: BrewColor.hairline),
         borderRadius: BorderRadius.circular(BrewSpace.radius),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final details = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                addOn.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: BrewType.rowTitle,
+              ),
+              const SizedBox(height: 4),
+              // Mono, because it is a figure to compare down the column —
+              // the one thing a monospaced face does that a proportional one
+              // cannot.
+              Text(addOn.priceLabel, style: BrewType.mono),
+            ],
+          );
+          final actions = Wrap(
+            spacing: BrewSpace.grid,
+            children: [
+              BrewMonoButton(
+                label: 'Edit',
+                semanticsLabel: 'Edit ${addOn.name}',
+                onPressed: onEdit,
+              ),
+              BrewMonoButton(
+                label: 'Delete',
+                semanticsLabel: 'Delete ${addOn.name}',
+                ink: BrewColor.alert,
+                onPressed: onDelete,
+              ),
+            ],
+          );
+
+          if (constraints.maxWidth < 340) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(addOn.name, style: BrewType.rowTitle),
-                const SizedBox(height: 4),
-                // Mono, because it is a figure to compare down the column —
-                // the one thing a monospaced face does that a proportional one
-                // cannot.
-                Text(addOn.priceLabel, style: BrewType.mono),
+                details,
+                const SizedBox(height: BrewSpace.grid),
+                actions,
               ],
-            ),
-          ),
-          const SizedBox(width: BrewSpace.grid),
-          BrewMonoButton(
-            label: 'Edit',
-            semanticsLabel: 'Edit ${addOn.name}',
-            onPressed: onEdit,
-          ),
-          const SizedBox(width: BrewSpace.grid * 2),
-          BrewMonoButton(
-            label: 'Delete',
-            semanticsLabel: 'Delete ${addOn.name}',
-            ink: BrewColor.alert,
-            onPressed: onDelete,
-          ),
-        ],
+            );
+          }
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: details),
+              actions,
+            ],
+          );
+        },
       ),
     );
   }
@@ -664,7 +691,8 @@ class _AddOnSheetState extends State<_AddOnSheet> {
       padding: EdgeInsets.only(
         left: BrewSpace.gutter,
         right: BrewSpace.gutter,
-        top: math.max(media.padding.top, BrewSpace.minInset) +
+        top:
+            math.max(media.padding.top, BrewSpace.minInset) +
             BrewSpace.headerClearance,
         bottom: media.viewInsets.bottom + BrewSpace.grid * 4,
       ),
@@ -809,9 +837,7 @@ class _GroupChipState extends State<_GroupChip> {
       pressed: _pressed,
       reduced: reduced,
       haptic: HapticFeedback.selectionClick,
-      semanticsLabel: selected
-          ? '${widget.label}. Selected.'
-          : widget.label,
+      semanticsLabel: selected ? '${widget.label}. Selected.' : widget.label,
       child: ExcludeSemantics(
         child: AnimatedContainer(
           duration: reduced ? Duration.zero : BrewMotion.press,

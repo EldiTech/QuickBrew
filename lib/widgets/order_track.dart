@@ -31,6 +31,7 @@ const orderStageNames = <String>[
   'Ready',
   'Picked up',
   'Declined',
+  'Cancelled',
 ];
 
 /// Where an order has got to, as one word in a bordered pill.

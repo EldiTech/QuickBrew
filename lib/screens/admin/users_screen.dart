@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart'
-    show
-        Colors,
-        Icon,
-        Icons,
-        Material,
-        SelectableText,
-        showModalBottomSheet;
+    show Colors, Icon, Icons, Material, SelectableText, showModalBottomSheet;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -23,6 +17,7 @@ import '../../widgets/person_mark.dart';
 import '../../widgets/shop_mark.dart';
 import '../../widgets/stagger.dart';
 import 'admin_transitions.dart';
+import 'admin_transaction_logs_screen.dart';
 import 'invite_admin_screen.dart';
 
 /// Who runs the two coffee shops, and the app's own customers — the super
@@ -93,11 +88,8 @@ class UsersScreen extends StatefulWidget {
   }) {
     return adminPageRoute<void>(
       reduced: reduced,
-      builder: (context) => UsersScreen(
-        admin: admin,
-        shops: shops,
-        currentUid: currentUid,
-      ),
+      builder: (context) =>
+          UsersScreen(admin: admin, shops: shops, currentUid: currentUid),
     );
   }
 
@@ -229,14 +221,20 @@ class _UsersScreenState extends State<UsersScreen> {
     final compact = media.size.height <= BrewSpace.compactHeight;
 
     const tabIndex = 3;
-    const shopsLabelIndex = tabIndex + 1;
+    const contentIndex = tabIndex + 1;
+    const shopsLabelIndex = contentIndex;
     const shopsBase = shopsLabelIndex + 1;
-    const rosterIndex = tabIndex + 1;
+    const rosterIndex = contentIndex;
 
-    final staggerCount = switch (_section) {
-      null => tabIndex + 2,
+    final logsIndex = switch (_section) {
+      null => contentIndex + 1,
       _TeamSection.admin => shopsBase + BrewPartner.values.length,
       _TeamSection.user => rosterIndex + 1,
+    };
+    final staggerCount = switch (_section) {
+      null => logsIndex + 1,
+      _TeamSection.admin => logsIndex + 1,
+      _TeamSection.user => logsIndex + 1,
     };
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -254,14 +252,10 @@ class _UsersScreenState extends State<UsersScreen> {
             stream: _people,
             builder: (context, snapshot) {
               final people = snapshot.data;
-              final adminCount = people
-                      ?.where((p) => p.role == BrewRole.admin)
-                      .length ??
-                  0;
-              final userCount = people
-                      ?.where((p) => p.role == BrewRole.customer)
-                      .length ??
-                  0;
+              final adminCount =
+                  people?.where((p) => p.role == BrewRole.admin).length ?? 0;
+              final userCount =
+                  people?.where((p) => p.role == BrewRole.customer).length ?? 0;
 
               return BrewSheet(
                 staggerCount: staggerCount,
@@ -277,37 +271,42 @@ class _UsersScreenState extends State<UsersScreen> {
                   SizedBox(height: brewBlockGap(compact)),
                   switch (_section) {
                     null => StaggerItem(
-                        index: tabIndex + 1,
-                        child: Text(
-                          'Pick Admin to see who runs each shop, or User to inspect the customer roster.',
-                          style: BrewType.rowBody.copyWith(
-                            color: BrewColor.cream.withValues(alpha: 0.76),
-                          ),
+                      index: contentIndex,
+                      child: Text(
+                        'Pick Admin to see who runs each shop, or User to inspect the customer roster.',
+                        style: BrewType.rowBody.copyWith(
+                          color: BrewColor.cream.withValues(alpha: 0.76),
                         ),
                       ),
+                    ),
                     _TeamSection.admin => Column(
-                        key: const ValueKey(_TeamSection.admin),
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          StaggerItem(
-                            index: shopsLabelIndex,
-                            child: const _SectionLabel('Store Administrators'),
-                          ),
-                          const SizedBox(height: BrewSpace.grid * 1.5),
-                          _shopsSection(people, shopsBase),
-                        ],
-                      ),
+                      key: const ValueKey(_TeamSection.admin),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        StaggerItem(
+                          index: shopsLabelIndex,
+                          child: const _SectionLabel('Store Administrators'),
+                        ),
+                        const SizedBox(height: BrewSpace.grid * 1.5),
+                        _shopsSection(people, shopsBase),
+                      ],
+                    ),
                     _TeamSection.user => Column(
-                        key: const ValueKey(_TeamSection.user),
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          StaggerItem(
-                            index: rosterIndex,
-                            child: _rosterSection(people),
-                          ),
-                        ],
-                      ),
+                      key: const ValueKey(_TeamSection.user),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        StaggerItem(
+                          index: rosterIndex,
+                          child: _rosterSection(people),
+                        ),
+                      ],
+                    ),
                   },
+                  SizedBox(height: brewBlockGap(compact)),
+                  StaggerItem(
+                    index: logsIndex,
+                    child: _transactionLogsSection(context),
+                  ),
                 ],
               );
             },
@@ -390,6 +389,55 @@ class _UsersScreenState extends State<UsersScreen> {
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _transactionLogsSection(BuildContext context) {
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionLabel('Transaction Logs'),
+        const SizedBox(height: BrewSpace.grid),
+        Text(
+          'Review pending orders separately from completed transaction history.',
+          style: BrewType.rowBody.copyWith(
+            color: BrewColor.cream.withValues(alpha: 0.76),
+          ),
+        ),
+        const SizedBox(height: BrewSpace.grid * 1.5),
+        Row(
+          children: [
+            Expanded(
+              child: _LogLink(
+                icon: Icons.pending_actions_rounded,
+                label: 'Pending orders',
+                onTap: () => Navigator.of(context).push(
+                  AdminTransactionLogsScreen.route(
+                    reduced: reduced,
+                    kind: AdminTransactionLogKind.pending,
+                    admin: widget.admin,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: BrewSpace.grid),
+            Expanded(
+              child: _LogLink(
+                icon: Icons.receipt_long_rounded,
+                label: 'Completed orders',
+                onTap: () => Navigator.of(context).push(
+                  AdminTransactionLogsScreen.route(
+                    reduced: reduced,
+                    kind: AdminTransactionLogKind.completed,
+                    admin: widget.admin,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -609,6 +657,48 @@ class _UsersScreenState extends State<UsersScreen> {
 
 String _accounts(int count) => count == 1 ? '1 account' : '$count accounts';
 
+class _LogLink extends StatelessWidget {
+  const _LogLink({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return BrewPressable(
+      onPressed: onTap,
+      radius: BrewSpace.radius,
+      onPressedChanged: (_) {},
+      reduced: MediaQuery.disableAnimationsOf(context),
+      pressed: false,
+      semanticsLabel: label,
+      child: Container(
+        padding: const EdgeInsets.all(BrewSpace.grid * 1.5),
+        decoration: BoxDecoration(
+          color: const Color(0x661B3022),
+          borderRadius: BorderRadius.circular(BrewSpace.radius),
+          border: Border.all(color: BrewColor.cream.withValues(alpha: 0.14)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: BrewColor.sageLight, size: 20),
+            const SizedBox(height: BrewSpace.grid),
+            Text(label, style: BrewType.mono),
+            const SizedBox(height: 4),
+            Text('Open log', style: BrewType.rowBody),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _AccountDetail extends StatelessWidget {
   const _AccountDetail({required this.person});
 
@@ -625,9 +715,7 @@ class _AccountDetail extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0x4D000000),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: BrewColor.cream.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: BrewColor.cream.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,8 +782,18 @@ class _AccountDetail extends StatelessWidget {
 }
 
 const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String _joinedOn(DateTime date) =>
@@ -1181,9 +1279,9 @@ class _ShopAdminRowState extends State<_ShopAdminRow> {
           gap: BrewSpace.grid,
           child: switch (widget.failure) {
             final message? => Semantics(
-                liveRegion: true,
-                child: Text(message, style: BrewType.fieldError),
-              ),
+              liveRegion: true,
+              child: Text(message, style: BrewType.fieldError),
+            ),
             null => null,
           },
         ),
@@ -1413,9 +1511,9 @@ class _PersonCardState extends State<_PersonCard> {
             gap: BrewSpace.grid,
             child: switch (widget.failure) {
               final message? => Semantics(
-                  liveRegion: true,
-                  child: Text(message, style: BrewType.fieldError),
-                ),
+                liveRegion: true,
+                child: Text(message, style: BrewType.fieldError),
+              ),
               null => null,
             },
           ),
@@ -1467,8 +1565,8 @@ class _UserActionButtonState extends State<_UserActionButton> {
           color: _pressed
               ? color.withValues(alpha: 0.15)
               : (widget.alert
-                  ? BrewColor.alert.withValues(alpha: 0.08)
-                  : const Color(0x33000000)),
+                    ? BrewColor.alert.withValues(alpha: 0.08)
+                    : const Color(0x33000000)),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: widget.alert
@@ -1533,9 +1631,9 @@ class _StandingSheetState extends State<_StandingSheet> {
   }
 
   void _save() {
-    Navigator.of(context).pop(
-      _StandingDraft(role: _role, store: _store, name: _name.text),
-    );
+    Navigator.of(
+      context,
+    ).pop(_StandingDraft(role: _role, store: _store, name: _name.text));
   }
 
   @override

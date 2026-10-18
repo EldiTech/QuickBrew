@@ -14,6 +14,7 @@ import 'screens/login_screen.dart';
 import 'screens/maintenance_screen.dart';
 import 'screens/order_wizard_screen.dart';
 import 'screens/store_landing_screen.dart';
+import 'screens/whole_menu_screen.dart';
 import 'services/system_maintenance.dart';
 import 'theme/brew_type.dart';
 import 'theme/tokens.dart';
@@ -261,6 +262,8 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
           uid: session.uid,
           email: session.email ?? '',
           name: session.name,
+          emailVerified: session.emailVerified,
+          onInviteNeedsVerification: _auth?.sendEmailVerification,
         )
         .catchError((Object error) {
           debugPrint('QuickBrew → profile setup failed: $error');
@@ -396,6 +399,7 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
         session: session,
         counter: _counter,
         onViewMenu: (shop) => _openMenu(context, shop),
+        onViewWholeMenu: (shop) => _openWholeMenu(context, shop),
         onResumeDraft: (draft) => _resumeDraft(context, draft),
         onDiscardDraft: (draft) => _discardDraft(session),
         onSignOut: _signOut,
@@ -449,6 +453,16 @@ class _QuickBrewAppState extends State<QuickBrewApp> {
         shop: shop,
         session: _session,
         counter: _counter,
+      ),
+    );
+  }
+
+  void _openWholeMenu(BuildContext context, BrewShop shop) {
+    Navigator.of(context).push(
+      WholeMenuViewerScreen.route(
+        shop: shop,
+        counter: _counter,
+        session: _session,
       ),
     );
   }

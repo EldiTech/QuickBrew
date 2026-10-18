@@ -247,10 +247,20 @@ class BrewAdmin {
   /// unhandled async error and take out the frame rather than the profile.
   /// The reader is left on the customer app, which is the safe reading of "we
   /// could not establish that this account is an admin".
+  ///
+  /// An invite is only claimed once [emailVerified] is true. Anyone can sign
+  /// up under an address they do not own, so without that proof whoever
+  /// registered an invited admin's email first would take the role. Until then
+  /// no profile is written at all — writing a customer one would make this a
+  /// no-op forever after and strand the invite — and
+  /// [onInviteNeedsVerification] is called so the verification link can go
+  /// out.
   Future<void> ensureProfile({
     required String uid,
     required String email,
     String? name,
+    bool emailVerified = false,
+    Future<void> Function()? onInviteNeedsVerification,
   }) async {
     // Firestore rejects an empty document id outright, so an account with no
     // address on it cannot be looked up in a collection keyed by one. Nothing
@@ -266,15 +276,23 @@ class BrewAdmin {
       final existing = await userRef.get();
       if (existing.exists) return;
 
-      final inviteRef = key.isEmpty
-          ? null
-          : _db.collection(_invites).doc(key);
+      final inviteRef = key.isEmpty ? null : _db.collection(_invites).doc(key);
       final invite = await inviteRef?.get();
       final inviteData = invite?.data();
-      final pending = invite != null &&
+      final pending =
+          invite != null &&
           invite.exists &&
           inviteData != null &&
           inviteData['used'] != true;
+
+      if (pending && !emailVerified) {
+        debugPrint(
+          'QuickBrew → invite for $key waits on email verification; '
+          'no profile written yet',
+        );
+        await onInviteNeedsVerification?.call();
+        return;
+      }
 
       // Read out of the invite while it is still known non-null under
       // `pending`, rather than inline in the map literal below — chaining a
@@ -322,7 +340,8 @@ class BrewAdmin {
         .snapshots()
         .map((snapshot) {
           final people = [
-            for (final doc in snapshot.docs) ?BrewUserProfile.read(doc.id, doc.data()),
+            for (final doc in snapshot.docs)
+              ?BrewUserProfile.read(doc.id, doc.data()),
           ];
           people.sort((a, b) {
             if (a.role != b.role) return b.role.index.compareTo(a.role.index);
@@ -344,7 +363,8 @@ class BrewAdmin {
         .snapshots()
         .map((snapshot) {
           final invites = [
-            for (final doc in snapshot.docs) ?BrewInvite.read(doc.id, doc.data()),
+            for (final doc in snapshot.docs)
+              ?BrewInvite.read(doc.id, doc.data()),
           ];
           invites.sort((a, b) => a.email.compareTo(b.email));
           return invites;
@@ -390,8 +410,9 @@ class BrewAdmin {
         name: _provisionerApp,
         options: Firebase.app().options,
       );
-      final credential = await FirebaseAuth.instanceFor(app: provisioner)
-          .createUserWithEmailAndPassword(email: trimmed, password: password);
+      final credential = await FirebaseAuth.instanceFor(
+        app: provisioner,
+      ).createUserWithEmailAndPassword(email: trimmed, password: password);
 
       final uid = credential.user?.uid;
       if (uid == null) {
@@ -434,7 +455,9 @@ class BrewAdmin {
         try {
           await provisioner.delete();
         } catch (error) {
-          debugPrint('QuickBrew → could not dispose the provisioner app: $error');
+          debugPrint(
+            'QuickBrew → could not dispose the provisioner app: $error',
+          );
         }
       }
     }
@@ -606,10 +629,9 @@ class BrewAdmin {
   /// changing.
   Future<String?> setShopOpen(BrewPartner partner, bool open) async {
     try {
-      await _db
-          .collection(_shops)
-          .doc(partner.id)
-          .set({'open': open}, SetOptions(merge: true));
+      await _db.collection(_shops).doc(partner.id).set({
+        'open': open,
+      }, SetOptions(merge: true));
       return null;
     } catch (error) {
       debugPrint('QuickBrew → could not set ${partner.id} open=$open: $error');
@@ -638,6 +660,24 @@ class BrewAdmin {
     return _db.collection(_shops).doc(partner.id).set({
       'name': name.trim().isEmpty ? null : name.trim(),
       'description': description.trim().isEmpty ? null : description.trim(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> setShopAbout(
+    BrewPartner partner, {
+    required String story,
+    required String weekdayHours,
+    required String weekendHours,
+    required String address,
+    required String contact,
+  }) {
+    String? value(String input) => input.trim().isEmpty ? null : input.trim();
+    return _db.collection(_shops).doc(partner.id).set({
+      'story': value(story),
+      'weekdayHours': value(weekdayHours),
+      'weekendHours': value(weekendHours),
+      'address': value(address),
+      'contact': value(contact),
     }, SetOptions(merge: true));
   }
 
@@ -853,8 +893,10 @@ class BrewAdmin {
     if (items.isEmpty) return 'There was nothing in that list to import.';
 
     try {
-      final collection =
-          _db.collection(_shops).doc(partner.id).collection(_menu);
+      final collection = _db
+          .collection(_shops)
+          .doc(partner.id)
+          .collection(_menu);
       final existing = await collection.get();
 
       final operations = existing.docs.length + items.length;
@@ -899,8 +941,11 @@ class BrewAdmin {
   /// rather than leave the old one behind.
   static Map<String, int>? _encodeSizePrices(Map<BrewItemSize, int> prices) =>
       prices.isEmpty
-          ? null
-          : {for (final entry in prices.entries) entry.key.storedValue: entry.value};
+      ? null
+      : {
+          for (final entry in prices.entries)
+            entry.key.storedValue: entry.value,
+        };
 
   /// The ceiling on an encoded item picture, in characters of base64. Same
   /// budget as [maxLogoChars] and the same reasoning: a downscaled picture at
@@ -960,7 +1005,9 @@ class BrewAdmin {
       });
       return null;
     } catch (error) {
-      debugPrint('QuickBrew → could not add an add-on to ${partner.id}: $error');
+      debugPrint(
+        'QuickBrew → could not add an add-on to ${partner.id}: $error',
+      );
       return 'That add-on did not save. Try again.';
     }
   }
@@ -1021,8 +1068,10 @@ class BrewAdmin {
     if (addOns.isEmpty) return 'There was nothing in that list to import.';
 
     try {
-      final collection =
-          _db.collection(_shops).doc(partner.id).collection(_addOns);
+      final collection = _db
+          .collection(_shops)
+          .doc(partner.id)
+          .collection(_addOns);
       final existing = await collection.get();
 
       final operations = existing.docs.length + addOns.length;
@@ -1046,7 +1095,9 @@ class BrewAdmin {
       await batch.commit();
       return null;
     } catch (error) {
-      debugPrint('QuickBrew → could not import add-ons into ${partner.id}: $error');
+      debugPrint(
+        'QuickBrew → could not import add-ons into ${partner.id}: $error',
+      );
       return 'That import did not go through. Try again.';
     }
   }
@@ -1058,8 +1109,10 @@ class BrewAdmin {
   /// confirmation.
   Future<String?> clearAddOns(BrewPartner partner) async {
     try {
-      final collection =
-          _db.collection(_shops).doc(partner.id).collection(_addOns);
+      final collection = _db
+          .collection(_shops)
+          .doc(partner.id)
+          .collection(_addOns);
       final existing = await collection.get();
       if (existing.docs.isEmpty) return null;
 
@@ -1102,7 +1155,8 @@ class BrewAdmin {
         .snapshots()
         .map((snapshot) {
           final orders = [
-            for (final doc in snapshot.docs) ?BrewOrder.read(doc.id, doc.data()),
+            for (final doc in snapshot.docs)
+              ?BrewOrder.read(doc.id, doc.data()),
           ];
           orders.sort(_oldestFirst);
           return orders;
@@ -1111,6 +1165,33 @@ class BrewAdmin {
           debugPrint('QuickBrew → ${partner.id} orders unavailable: $error');
           throw error;
         });
+  }
+
+  /// Every order across both stores, for the superadmin transaction log.
+  Stream<List<BrewOrder>> allOrders() {
+    return _db
+        .collection(_orders)
+        .snapshots()
+        .map((snapshot) {
+          final orders = [
+            for (final doc in snapshot.docs)
+              ?BrewOrder.read(doc.id, doc.data()),
+          ];
+          orders.sort(_newestFirst);
+          return orders;
+        })
+        .handleError((Object error) {
+          debugPrint('QuickBrew → all orders unavailable: $error');
+          throw error;
+        });
+  }
+
+  static int _newestFirst(BrewOrder a, BrewOrder b) {
+    final (left, right) = (a.placedAt, b.placedAt);
+    if (left == null && right == null) return 0;
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return right.compareTo(left);
   }
 
   /// Ascending by `placedAt`, with an unstamped order counted as the oldest
@@ -1145,9 +1226,11 @@ class BrewAdmin {
   /// refused write already shows.
   Future<String?> advanceOrderStage(String orderId, BrewOrderStage next) async {
     try {
-      await _db.collection(_orders).doc(orderId).update({
-        'stage': next.name,
-      }).timeout(_writeTimeout);
+      await _db
+          .collection(_orders)
+          .doc(orderId)
+          .update({'stage': next.name})
+          .timeout(_writeTimeout);
       return null;
     } catch (error) {
       debugPrint('QuickBrew → could not advance order $orderId: $error');
@@ -1171,13 +1254,94 @@ class BrewAdmin {
   Future<String?> rejectOrder(String orderId, {String? reason}) async {
     final trimmed = reason?.trim();
     try {
-      await _db.collection(_orders).doc(orderId).update({
-        'stage': BrewOrderStage.rejected.name,
-        'rejectionReason': (trimmed == null || trimmed.isEmpty) ? null : trimmed,
-      }).timeout(_writeTimeout);
+      await _db
+          .collection(_orders)
+          .doc(orderId)
+          .update({
+            'stage': BrewOrderStage.rejected.name,
+            'rejectionReason': (trimmed == null || trimmed.isEmpty)
+                ? null
+                : trimmed,
+          })
+          .timeout(_writeTimeout);
       return null;
     } catch (error) {
       debugPrint('QuickBrew → could not reject order $orderId: $error');
+      return 'That did not go through. Try again.';
+    }
+  }
+
+  /// Live whole menu boards configured for [partner].
+  Stream<List<BrewWholeMenuBoard>> wholeMenuFor(BrewPartner partner) {
+    return _db
+        .collection(_shops)
+        .doc(partner.id)
+        .collection('whole_menu')
+        .snapshots()
+        .map((snapshot) {
+          final boards = [
+            for (final doc in snapshot.docs)
+              ?BrewWholeMenuBoard.read(doc.id, doc.data()),
+          ];
+          boards.sort(BrewWholeMenuBoard.byBoardOrder);
+          return BrewWholeMenuBoard.resolveFor(partner, boards);
+        });
+  }
+
+  /// Saves or updates a whole menu board in Firestore.
+  Future<String?> saveWholeMenuBoard({
+    required BrewPartner partner,
+    required String boardId,
+    required String title,
+    String? description,
+    Uint8List? imageBytes,
+    double sort = 0,
+    double aspectRatio = 1024 / 511,
+  }) async {
+    try {
+      final docRef = _db
+          .collection(_shops)
+          .doc(partner.id)
+          .collection('whole_menu')
+          .doc(boardId);
+
+      final data = <String, Object?>{
+        'title': title.trim(),
+        'sort': sort,
+        'aspectRatio': aspectRatio,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (description != null && description.trim().isNotEmpty) {
+        data['description'] = description.trim();
+      }
+      if (imageBytes != null) {
+        data['imageBase64'] = base64Encode(imageBytes);
+      }
+
+      await docRef.set(data, SetOptions(merge: true)).timeout(_writeTimeout);
+      return null;
+    } catch (e) {
+      debugPrint('QuickBrew → failed to save whole menu board: $e');
+      return 'That did not go through. Try again.';
+    }
+  }
+
+  /// Removes a whole menu board from Firestore.
+  Future<String?> deleteWholeMenuBoard({
+    required BrewPartner partner,
+    required String boardId,
+  }) async {
+    try {
+      await _db
+          .collection(_shops)
+          .doc(partner.id)
+          .collection('whole_menu')
+          .doc(boardId)
+          .delete()
+          .timeout(_writeTimeout);
+      return null;
+    } catch (e) {
+      debugPrint('QuickBrew → failed to delete whole menu board: $e');
       return 'That did not go through. Try again.';
     }
   }

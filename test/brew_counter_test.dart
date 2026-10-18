@@ -21,26 +21,34 @@ void main() {
     counter = BrewCounter(db);
   });
 
-  group('shops', () {
-    test('is always both partners, in a fixed order, whatever is stored', () async {
-      // Nothing seeded at all.
-      expect(
-        await counter.shops().first,
-        isA<List<BrewShop>>()
-            .having((s) => s.length, 'length', 2)
-            .having((s) => s[0].partner, 'first', BrewPartner.a)
-            .having((s) => s[1].partner, 'second', BrewPartner.b),
-      );
+  test('adds one five-peso platform fee per transaction', () {
+    expect(quickBrewOrderTotalCents(5500), 6000);
+    expect(quickBrewOrderTotalCents(11000), 11500);
+  });
 
-      // And a collection that has picked up something else entirely still yields
-      // exactly the two, still in this order.
-      await db.collection('shops').doc('some-other-cafe').set({'open': true});
-      final shops = await counter.shops().first;
-      expect(shops.map((shop) => shop.partner), [
-        BrewPartner.a,
-        BrewPartner.b,
-      ]);
-    });
+  group('shops', () {
+    test(
+      'is always both partners, in a fixed order, whatever is stored',
+      () async {
+        // Nothing seeded at all.
+        expect(
+          await counter.shops().first,
+          isA<List<BrewShop>>()
+              .having((s) => s.length, 'length', 2)
+              .having((s) => s[0].partner, 'first', BrewPartner.a)
+              .having((s) => s[1].partner, 'second', BrewPartner.b),
+        );
+
+        // And a collection that has picked up something else entirely still yields
+        // exactly the two, still in this order.
+        await db.collection('shops').doc('some-other-cafe').set({'open': true});
+        final shops = await counter.shops().first;
+        expect(shops.map((shop) => shop.partner), [
+          BrewPartner.a,
+          BrewPartner.b,
+        ]);
+      },
+    );
 
     test('only a stored false reads as closed', () async {
       await db.collection('shops').doc('coffee-shop-a').set({'open': true});
@@ -90,14 +98,17 @@ void main() {
       expect(seen.last, BrewShopStatus.open);
     });
 
-    test('logout can clear the warm cache without affecting the stream', () async {
-      await db.collection('shops').doc('coffee-shop-a').set({'open': true});
-      expect(await counter.shops().first, isNotEmpty);
+    test(
+      'logout can clear the warm cache without affecting the stream',
+      () async {
+        await db.collection('shops').doc('coffee-shop-a').set({'open': true});
+        expect(await counter.shops().first, isNotEmpty);
 
-      counter.clearCache();
+        counter.clearCache();
 
-      expect(counter.lastShops, isNull);
-    });
+        expect(counter.lastShops, isNull);
+      },
+    );
   });
 
   group('the active order', () {
@@ -145,10 +156,10 @@ void main() {
       );
 
       final orders = await counter.activeOrders('dave').first;
-      expect(
-        orders.map((order) => order.itemLine),
-        ['Iced Latte + Croissant', 'Filter'],
-      );
+      expect(orders.map((order) => order.itemLine), [
+        'Iced Latte + Croissant',
+        'Filter',
+      ]);
     });
 
     test('a just-placed order with no server stamp yet sorts first', () async {
@@ -163,40 +174,51 @@ void main() {
       );
     });
 
-    test('a stage nobody recognises drops that order and nothing else', () async {
-      await place('bogus', stage: 'levitating');
-      await place('good', items: const ['Cortado']);
+    test(
+      'a stage nobody recognises drops that order and nothing else',
+      () async {
+        await place('bogus', stage: 'levitating');
+        await place('good', items: const ['Cortado']);
 
-      final orders = await counter.orders('dave').first;
-      expect(orders.map((order) => order.itemLine), ['Cortado']);
-    });
+        final orders = await counter.orders('dave').first;
+        expect(orders.map((order) => order.itemLine), ['Cortado']);
+      },
+    );
 
     test('an order with no items is not an order', () async {
       await place('empty', items: const []);
       expect(await counter.activeOrders('dave').first, isEmpty);
     });
 
-    test('reports the stage it is at and moves when the counter does', () async {
-      await place('live', stage: 'received');
-      final seen = <BrewOrderStage?>[];
-      final watch = counter
-          .activeOrders('dave')
-          .listen((orders) => seen.add(orders.firstOrNull?.stage));
-      addTearDown(watch.cancel);
+    test(
+      'reports the stage it is at and moves when the counter does',
+      () async {
+        await place('live', stage: 'received');
+        final seen = <BrewOrderStage?>[];
+        final watch = counter
+            .activeOrders('dave')
+            .listen((orders) => seen.add(orders.firstOrNull?.stage));
+        addTearDown(watch.cancel);
 
-      await pumpEventQueue();
-      await db.collection('orders').doc('live').update({'stage': 'ready'});
-      await pumpEventQueue();
-      // Completed takes the card off the screen entirely.
-      await db.collection('orders').doc('live').update({'stage': 'completed'});
-      await pumpEventQueue();
+        await pumpEventQueue();
+        await db.collection('orders').doc('live').update({'stage': 'ready'});
+        await pumpEventQueue();
+        // Completed takes the card off the screen entirely.
+        await db.collection('orders').doc('live').update({
+          'stage': 'completed',
+        });
+        await pumpEventQueue();
 
-      expect(seen, containsAllInOrder([
-        BrewOrderStage.received,
-        BrewOrderStage.ready,
-        null,
-      ]));
-    });
+        expect(
+          seen,
+          containsAllInOrder([
+            BrewOrderStage.received,
+            BrewOrderStage.ready,
+            null,
+          ]),
+        );
+      },
+    );
   });
 
   group('an order', () {
@@ -240,18 +262,27 @@ void main() {
 
     test('inks one segment of the rule per stage reached', () {
       expect(
-        read({'items': ['Bun'], 'stage': 'received'}).step,
+        read({
+          'items': ['Bun'],
+          'stage': 'received',
+        }).step,
         1,
       );
       expect(
-        read({'items': ['Bun'], 'stage': 'ready'}).step,
+        read({
+          'items': ['Bun'],
+          'stage': 'ready',
+        }).step,
         3,
       );
       expect(BrewOrder.steps, 4);
     });
 
     test('takes a single string of items as well as a list', () {
-      expect(read({'items': 'Flat White', 'stage': 'ready'}).itemLine, 'Flat White');
+      expect(
+        read({'items': 'Flat White', 'stage': 'ready'}).itemLine,
+        'Flat White',
+      );
     });
 
     test('reads the pickup, payment and total fields placeOrder writes', () {
@@ -275,24 +306,37 @@ void main() {
       expect(order.paymentMethod, 'GCash');
     });
 
-    test('leaves the new fields null rather than guessing at a document that lacks them', () {
-      final order = read({'items': ['Bun'], 'stage': 'received'});
+    test(
+      'leaves the new fields null rather than guessing at a document that lacks them',
+      () {
+        final order = read({
+          'items': ['Bun'],
+          'stage': 'received',
+        });
 
-      expect(order.uid, isNull);
-      expect(order.totalCents, isNull);
-      expect(order.totalLabel, isNull);
-      expect(order.pickupName, isNull);
-      expect(order.pickupPhone, isNull);
-      expect(order.pickupNote, isNull);
-      expect(order.paymentMethod, isNull);
-    });
+        expect(order.uid, isNull);
+        expect(order.totalCents, isNull);
+        expect(order.totalLabel, isNull);
+        expect(order.pickupName, isNull);
+        expect(order.pickupPhone, isNull);
+        expect(order.pickupNote, isNull);
+        expect(order.paymentMethod, isNull);
+      },
+    );
 
-    test('formats a whole-peso total bare, like every other price in the app', () {
-      expect(
-        read({'items': ['Bun'], 'stage': 'received', 'totalCents': 3800}).totalLabel,
-        '₱38',
-      );
-    });
+    test(
+      'formats a whole-peso total bare, like every other price in the app',
+      () {
+        expect(
+          read({
+            'items': ['Bun'],
+            'stage': 'received',
+            'totalCents': 3800,
+          }).totalLabel,
+          '₱38',
+        );
+      },
+    );
   });
 
   group('BrewOrderStage.next', () {
@@ -303,12 +347,15 @@ void main() {
       expect(BrewOrderStage.completed.next, isNull);
     });
 
-    test('never chains into rejected — that stage is only ever set directly', () {
-      expect(BrewOrderStage.rejected.next, isNull);
-      for (final stage in BrewOrderStage.values) {
-        expect(stage.next, isNot(BrewOrderStage.rejected));
-      }
-    });
+    test(
+      'never chains into rejected — that stage is only ever set directly',
+      () {
+        expect(BrewOrderStage.rejected.next, isNull);
+        for (final stage in BrewOrderStage.values) {
+          expect(stage.next, isNot(BrewOrderStage.rejected));
+        }
+      },
+    );
   });
 
   group('BrewOrderStage.isActive', () {
@@ -337,7 +384,10 @@ void main() {
 
     test('leaves the reason null when none was given', () {
       expect(
-        read({'items': ['Bun'], 'stage': 'rejected'}).rejectionReason,
+        read({
+          'items': ['Bun'],
+          'stage': 'rejected',
+        }).rejectionReason,
         isNull,
       );
     });
@@ -504,7 +554,8 @@ void main() {
       expect(
         late_,
         [1],
-        reason: 'an empty list here is the Orders tab stuck on "Looking up '
+        reason:
+            'an empty list here is the Orders tab stuck on "Looking up '
             'your orders…" while Home already had the answer',
       );
 

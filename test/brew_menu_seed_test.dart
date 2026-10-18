@@ -46,9 +46,7 @@ void main() {
   });
 
   test('a sub-category that merely repeats its category is not one', () {
-    final hot = items.firstWhere(
-      (item) => item.category == 'Hot Beverages',
-    );
+    final hot = items.firstWhere((item) => item.category == 'Hot Beverages');
     expect(hot.subCategory, isNull);
   });
 
@@ -71,8 +69,8 @@ void main() {
     final csv = File(BrewMenuSeed.dripCoAsset).readAsStringSync();
     final items = BrewMenuSeed.parse(csv);
 
-    test('reads all 40 priced drinks', () {
-      expect(items.length, 40);
+    test('reads all 42 priced drinks', () {
+      expect(items.length, 42);
     });
 
     test('categories match the spreadsheet', () {
@@ -84,21 +82,52 @@ void main() {
           })!,
       ]);
       expect(categories, [
+        'Hello Vietnam',
+        'Tiramisu',
         'Cà Phê Series',
-        'Premium 45/55',
-        'Premium 50/60',
         'Premium',
         'Milky Series',
-        'Featured / Promo',
       ]);
     });
 
-    test('two-size drinks are priced for Grande (medium) and Venti (large)', () {
-      final americano = items.firstWhere((item) => item.name == 'Americano');
-      expect(americano.sizePrices[BrewItemSize.medium], 3800);
-      expect(americano.sizePrices[BrewItemSize.large], 4800);
-      expect(americano.priceCents, isNull);
+    test('Kind is imported as the sub-category', () {
+      String? subCategoryOf(String name) =>
+          items.firstWhere((item) => item.name == name).subCategory;
+
+      expect(subCategoryOf('Americano'), 'Classic Coffee');
+      expect(subCategoryOf('Matcha Fusion'), 'Premium Coffee');
+      expect(subCategoryOf("Barista's Drink"), 'Specialty Coffee');
+      expect(subCategoryOf('Strawberry Milk'), 'Classic Milky');
+      expect(subCategoryOf('Milky Nutella'), 'Classic Milky');
+      expect(subCategoryOf('Tiramisu Matcha'), 'Tiramisu Drinks');
+      expect(subCategoryOf('Tiramisu Latte'), 'Tiramisu Drinks');
     });
+
+    test('Milky Series has only the Classic Milky sub-category', () {
+      final subCategories = items
+          .where((item) => item.category == 'Milky Series')
+          .map((item) => item.subCategory)
+          .toSet();
+      expect(subCategories, {'Classic Milky'});
+    });
+
+    test('Premium has only the Premium Coffee sub-category', () {
+      final subCategories = items
+          .where((item) => item.category == 'Premium')
+          .map((item) => item.subCategory)
+          .toSet();
+      expect(subCategories, {'Premium Coffee'});
+    });
+
+    test(
+      'two-size drinks are priced for Grande (medium) and Venti (large)',
+      () {
+        final americano = items.firstWhere((item) => item.name == 'Americano');
+        expect(americano.sizePrices[BrewItemSize.medium], 3800);
+        expect(americano.sizePrices[BrewItemSize.large], 4800);
+        expect(americano.priceCents, isNull);
+      },
+    );
 
     test('single-size promo drinks are flat priced', () {
       final eggCoffee = items.firstWhere(
@@ -112,6 +141,12 @@ void main() {
       );
       expect(tiramisu.sizePrices, isEmpty);
       expect(tiramisu.priceCents, 9800);
+
+      final tiramisuLatte = items.firstWhere(
+        (item) => item.name == 'Tiramisu Latte',
+      );
+      expect(tiramisuLatte.sizePrices, isEmpty);
+      expect(tiramisuLatte.priceCents, 9800);
     });
 
     test('board order is file order', () {
@@ -130,13 +165,16 @@ void main() {
 
     test('groups cover Coffee, Drizzle, Sinkers, Toppings, Milk choice', () {
       final groups = addOns.map((a) => a.group).toSet();
-      expect(groups, containsAll([
-        'Coffee',
-        'Drizzle',
-        'Sinkers',
-        'Toppings',
-        'Milk choice',
-      ]));
+      expect(
+        groups,
+        containsAll([
+          'Coffee',
+          'Drizzle',
+          'Sinkers',
+          'Toppings',
+          'Milk choice',
+        ]),
+      );
     });
 
     test('prices match the spreadsheet', () {
@@ -151,4 +189,3 @@ void main() {
     });
   });
 }
-

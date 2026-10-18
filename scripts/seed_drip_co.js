@@ -2,7 +2,7 @@
 /**
  * Direct Seeder Script for Drip & Co Menu and Add-ons
  * Target collections:
- *   - /shops/coffee-shop-a/menu (40 drinks)
+ *   - /shops/coffee-shop-a/menu (42 drinks)
  *   - /shops/coffee-shop-a/addons (12 add-ons)
  *
  * Usage:
@@ -79,8 +79,35 @@ const DRINKS = [
 
   // Featured / Promo
   { name: 'Cà Phê Trứng (Egg Coffee)', category: 'Featured / Promo', subCategory: null, sizePrices: null, priceCents: 8800, description: 'Venti size' },
-  { name: 'Tiramisu Matcha', category: 'Featured / Promo', subCategory: null, sizePrices: null, priceCents: 9800, description: 'Venti size' }
+  { name: 'Tiramisu Matcha', category: 'Featured / Promo', subCategory: null, sizePrices: null, priceCents: 9800, description: 'Venti size' },
+  { name: 'C\u00e0 Ph\u00ea S\u1eefa \u0110\u00e1', category: 'Hello Vietnam', subCategory: 'Vietnamese Coffee', sizePrices: { medium: 5000, large: 6000 }, priceCents: null, description: null },
+  { name: 'Tiramisu Latte', category: 'Tiramisu', subCategory: 'Tiramisu Drinks', sizePrices: null, priceCents: 9800, description: 'Venti size' }
 ];
+
+// Keep the Firestore filing identical to DRIP AND CO MENU.csv. The source's
+// Main Category becomes `category`; Kind becomes `subCategory`, matching the
+// Seven Coffee import architecture.
+for (const drink of DRINKS) {
+  if (drink.name === 'Cà Phê Trứng (Egg Coffee)') {
+    drink.category = 'Hello Vietnam';
+    drink.subCategory = 'Vietnamese Coffee';
+  } else if (drink.name === 'Tiramisu Matcha') {
+    drink.category = 'Tiramisu';
+    drink.subCategory = 'Tiramisu Drinks';
+  } else if (drink.category === 'Cà Phê Series') {
+    drink.subCategory = 'Classic Coffee';
+  } else if (drink.category === 'Premium 45/55') {
+    drink.category = 'Cà Phê Series';
+    drink.subCategory = 'Premium Coffee';
+  } else if (drink.category === 'Premium 50/60') {
+    drink.category = 'Cà Phê Series';
+    drink.subCategory = 'Specialty Coffee';
+  } else if (drink.category === 'Premium') {
+    drink.subCategory = 'Premium Coffee';
+  } else if (drink.category === 'Milky Series') {
+    drink.subCategory = 'Classic Milky';
+  }
+}
 
 // 2. Add-ons data (12 add-ons from drip_co_menu.xlsx)
 const ADDONS = [

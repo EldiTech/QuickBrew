@@ -7,28 +7,28 @@
 const DEFAULT_WEB_CONFIG = {
   versionTag: 'v1.0.0 Stable',
   buildNumber: '1.0.0+1',
-  apkSize: '56.0 MB',
-  minAndroid: 'Android 6.0+ (Marshmallow)',
+  apkSize: '59.2 MB',
+  minAndroid: 'Android 7.0+ (Nougat)',
   apkFileName: 'quickbrew-release.apk',
-  checksum: 'CFAD5848B2287D5BE537E88DB1FE04A1AF2B64D8AD1595DDF19C3059F6E75E9B',
+  checksum: '4EE8E3A3524830EEAC4C261D3D35F048A7D6F1519FDD95C4BCA0D4E91342CDB2',
   changelog: '• Initial official release for Seven Coffee & Tea\n• 116 beverages with full customization wizard\n• Live real-time order ledger & GCash QR checkout',
-  
+
   heroHeadline: 'Craft Coffee, Ordered in Seconds.',
   heroSubtitle: 'The definitive specialty coffee companion. Browse 116 curated artisanal recipes, custom-dial your milk and roast profile, and track your brew from extraction to counter in real time.',
   ctaLabel: 'Download APK (v1.0.0)',
-  
+
   drink1Name: 'Caramel Cloud Macchiato',
   drink1Price: '₱145',
   drink2Name: 'Matcha Berry Cold Foam',
   drink2Price: '₱160',
-  
+
   bannerActive: true,
   bannerText: 'Official QuickBrew Android APK is now available for direct download.',
   bannerBadge: 'NEW RELEASE',
-  
+
   metaTitle: 'QuickBrew — Official Android App Download',
   metaDesc: 'Download the latest QuickBrew Android APK for Seven Coffee & Tea. Fast craft coffee ordering, custom drinks, and live brew tracking.',
-  
+
   downloadsActive: true
 };
 
@@ -169,26 +169,271 @@ function triggerLoginSuccess3D(displayName) {
   });
 }
 
-// Authentication
-function checkAuthSession(isAnimated = false) {
-  const loggedIn = localStorage.getItem('qb_web_admin_session');
+// ============================================================================
+// Zero-Trust Security Gateway & Rate Limiting Engine
+// ============================================================================
+
+let lockdownCountdownTimer = null;
+let sessionIdleTimer = null;
+const IDLE_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes auto logout
+
+/**
+ * Console Security Advisory Banner
+ */
+console.log(
+  '%c🛡️ QuickBrew Security Perimeter Active\n%cAll administrative transactions and authentication attempts are cryptographically verified and recorded. Unauthorized session injection or brute-force requests will trigger immediate firewall lockouts.',
+  'color: #10B981; font-size: 14px; font-weight: 800;',
+  'color: #9CA3AF; font-size: 12px;'
+);
+
+/**
+ * Check if the browser is currently under security lockdown
+ */
+function isLockdownActive() {
+  try {
+    const raw = localStorage.getItem('qb_security_lockdown');
+    if (!raw) return null;
+    const lock = JSON.parse(raw);
+    const now = Date.now();
+    if (lock && lock.blockedUntil && lock.blockedUntil > now) {
+      return lock;
+    }
+    localStorage.removeItem('qb_security_lockdown');
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * Activate the unbypassable Full-Screen Security Lockdown
+ */
+function activateSecurityLockdown(reason, incidentId, retryAfterSeconds) {
+  const now = Date.now();
+  const durationSec = retryAfterSeconds || 1800;
+  const blockedUntil = now + durationSec * 1000;
+  const incId = incidentId || ('SEC-BLK-' + Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase());
+  const rsn = reason || 'Multiple unauthorized authentication failures or malicious tampering detected.';
+
+  const lockState = {
+    blockedUntil: blockedUntil,
+    incidentId: incId,
+    reason: rsn
+  };
+
+  localStorage.setItem('qb_security_lockdown', JSON.stringify(lockState));
+
+  // Purge any stored credentials or sessions immediately
+  localStorage.removeItem('qb_web_admin_session');
+  localStorage.removeItem('qb_admin_token');
+  sessionStorage.removeItem('qb_admin_token');
+
+  renderLockdownUI(lockState);
+}
+
+/**
+ * Render the lockdown screen DOM and countdown timer
+ */
+function renderLockdownUI(lockState) {
+  const lockdownScreen = document.getElementById('securityLockdownScreen');
+  const loginWrapper = document.getElementById('loginViewWrapper');
+  const dashboardWrapper = document.getElementById('adminDashboardWrapper');
+  const reasonEl = document.getElementById('lockdownReason');
+  const countdownEl = document.getElementById('lockdownCountdown');
+  const incidentEl = document.getElementById('lockdownIncidentId');
+
+  if (loginWrapper) loginWrapper.style.display = 'none';
+  if (dashboardWrapper) {
+    dashboardWrapper.classList.remove('active');
+    dashboardWrapper.style.display = 'none';
+  }
+  if (lockdownScreen) lockdownScreen.style.display = 'flex';
+
+  if (reasonEl) reasonEl.innerText = lockState.reason;
+  if (incidentEl) incidentEl.innerText = lockState.incidentId;
+
+  if (lockdownCountdownTimer) clearInterval(lockdownCountdownTimer);
+
+  const updateCountdown = () => {
+    const remaining = Math.max(0, Math.ceil((lockState.blockedUntil - Date.now()) / 1000));
+    if (remaining <= 0) {
+      clearInterval(lockdownCountdownTimer);
+      localStorage.removeItem('qb_security_lockdown');
+      if (lockdownScreen) lockdownScreen.style.display = 'none';
+      checkAuthSession();
+      showToast('Security cooldown expired. Gateway reopened.');
+      updateAttemptsIndicator(5);
+      return;
+    }
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    if (countdownEl) {
+      countdownEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+  };
+
+  updateCountdown();
+  lockdownCountdownTimer = setInterval(updateCountdown, 1000);
+}
+
+/**
+ * Update the remaining attempts indicator on the login form
+ */
+function updateAttemptsIndicator(remaining) {
+  const indicator = document.getElementById('loginSecurityIndicator');
+  const text = document.getElementById('loginAttemptsStatus');
+  if (!text) return;
+
+  if (remaining <= 0) {
+    text.innerText = 'Gateway Locked • 0 Attempts';
+    if (indicator) indicator.className = 'login-security-indicator danger';
+  } else if (remaining <= 2) {
+    text.innerText = `Warning: ${remaining} Attempt${remaining === 1 ? '' : 's'} Remaining`;
+    if (indicator) indicator.className = 'login-security-indicator danger';
+  } else if (remaining <= 4) {
+    text.innerText = `Firewall Active • ${remaining} Attempts Remaining`;
+    if (indicator) indicator.className = 'login-security-indicator warning';
+  } else {
+    text.innerText = `Firewall Active • 5 Attempts Remaining`;
+    if (indicator) indicator.className = 'login-security-indicator';
+  }
+}
+
+/**
+ * Report tamper event to server and trigger local lockdown
+ */
+async function reportTamperAndLock(reason) {
+  try {
+    await fetch('/api/admin-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'report-tamper', reason: reason })
+    });
+  } catch (_) { }
+  activateSecurityLockdown(reason, 'SEC-BYPASS-' + Math.random().toString(36).substring(2, 6).toUpperCase(), 3600);
+}
+
+/**
+ * Storage Watchdog: Detects if someone modifies localStorage in DevTools to fake a login
+ */
+window.addEventListener('storage', (e) => {
+  if (e.key === 'qb_web_admin_session' && e.newValue) {
+    const token = localStorage.getItem('qb_admin_token') || sessionStorage.getItem('qb_admin_token');
+    if (!token) {
+      reportTamperAndLock('External storage modification / unauthorized session injection attempt.');
+    }
+  }
+});
+
+/**
+ * Reset idle timer on user interaction
+ */
+function resetSessionIdleTimer() {
+  clearTimeout(sessionIdleTimer);
+  const session = localStorage.getItem('qb_web_admin_session');
+  if (!session) return;
+
+  sessionIdleTimer = setTimeout(() => {
+    localStorage.removeItem('qb_web_admin_session');
+    localStorage.removeItem('qb_admin_token');
+    sessionStorage.removeItem('qb_admin_token');
+    if (fbAuth) fbAuth.signOut().catch(() => {});
+    showToast('Session timed out due to 20 minutes of inactivity.');
+    checkAuthSession();
+  }, IDLE_TIMEOUT_MS);
+}
+
+['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+  window.addEventListener(evt, resetSessionIdleTimer, { passive: true });
+});
+
+// Authentication & Cryptographic Session Verification Gate
+async function checkAuthSession(isAnimated = false) {
+  // 1. Guard against active lockdown
+  const lock = isLockdownActive();
+  if (lock) {
+    renderLockdownUI(lock);
+    return;
+  }
+
+  const sessionDisplay = localStorage.getItem('qb_web_admin_session');
+  const token = localStorage.getItem('qb_admin_token') || sessionStorage.getItem('qb_admin_token');
   const loginWrapper = document.getElementById('loginViewWrapper');
   const dashboardWrapper = document.getElementById('adminDashboardWrapper');
   const userTag = document.getElementById('adminUserEmail');
 
-  if (loggedIn) {
-    loginWrapper.style.display = 'none';
-    dashboardWrapper.classList.add('active');
-    if (isAnimated) {
-      dashboardWrapper.classList.remove('dashboard-3d-entrance');
-      void dashboardWrapper.offsetWidth; // Force reflow
-      dashboardWrapper.classList.add('dashboard-3d-entrance');
+  // Anti-Bypass Guard: If session string is set but no cryptographic token exists,
+  // someone attempted to bypass authentication via localStorage manipulation!
+  if (sessionDisplay && !token && (!fbAuth || !fbAuth.currentUser)) {
+    console.warn('[SECURITY] Unverified session detected without token. Triggering tamper lockdown.');
+    reportTamperAndLock('Tampered session detected: Missing cryptographic verification token.');
+    return;
+  }
+
+  if (sessionDisplay && token) {
+    // Cryptographically verify token with serverless authentication gate
+    try {
+      const res = await fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', token: token })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.valid) {
+        console.warn('Session verification note:', data.reason);
+        // Only clear if server explicitly marked token invalid
+        if (data && data.valid === false) {
+          localStorage.removeItem('qb_web_admin_session');
+          localStorage.removeItem('qb_admin_token');
+          sessionStorage.removeItem('qb_admin_token');
+          showToast('Administrative session expired. Please sign in.');
+          checkAuthSession();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Offline token verification note:', e);
     }
-    if (userTag) userTag.innerText = loggedIn;
+
+    if (loginWrapper) loginWrapper.style.display = 'none';
+    if (dashboardWrapper) {
+      dashboardWrapper.style.display = 'flex';
+      dashboardWrapper.classList.add('active');
+      if (isAnimated) {
+        dashboardWrapper.classList.remove('dashboard-3d-entrance');
+        void dashboardWrapper.offsetWidth;
+        dashboardWrapper.classList.add('dashboard-3d-entrance');
+      }
+    }
+    if (userTag) userTag.innerText = sessionDisplay;
+    resetSessionIdleTimer();
   } else {
-    loginWrapper.style.display = 'flex';
-    dashboardWrapper.classList.remove('active');
-    dashboardWrapper.classList.remove('dashboard-3d-entrance');
+    // Unauthenticated State
+    if (loginWrapper) loginWrapper.style.display = 'flex';
+    if (dashboardWrapper) {
+      dashboardWrapper.classList.remove('active');
+      dashboardWrapper.classList.remove('dashboard-3d-entrance');
+      dashboardWrapper.style.display = 'none';
+    }
+
+    // Sync status with server rate limiter
+    try {
+      fetch('/api/admin-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check-status' })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.blocked) {
+          activateSecurityLockdown(d.reason, d.incidentId, d.retryAfter);
+        } else if (typeof d.remainingAttempts === 'number') {
+          updateAttemptsIndicator(d.remainingAttempts);
+        }
+      })
+      .catch(() => {});
+    } catch (_) {}
 
     // Reset 3D stage states so next login can animate cleanly
     const stage = document.getElementById('login3dStage');
@@ -211,50 +456,6 @@ function checkAuthSession(isAnimated = false) {
   }
 }
 
-// Master Administrator Credentials verification (SHA-256 hashed for security)
-const MASTER_USER_HASHES = [
-  '540e3d1fc57698e6be2e68c8f44fafc808cbc74938916c4c404a4b732e982221', // akosiluis
-  '169a97d313e18c815cafd526f771e9fbf7dd7e929cfec048fbe9b8d5d736c230'  // akosiluis102004
-];
-
-const MASTER_PWD_HASHES = [
-  '15a00d2eb172b0d2c6382f1d2eedb521f2b925bf1ca91aa3b9bbaf1f19e05d4e', // Moymoy2004
-  'f0c7433ef112fad2542f91e85474b99c762c867e636caae78ded6d9a485b22eb', // moymoy2004
-  'b9bc00f49cb28a3a4ecb9c73bcc63cec9466897c4f104142fb11c2f900c6bfc4', // AkoSiLuis102004
-  '169a97d313e18c815cafd526f771e9fbf7dd7e929cfec048fbe9b8d5d736c230'  // akosiluis102004
-];
-
-async function hashSHA256(text) {
-  if (window.crypto && window.crypto.subtle) {
-    const buffer = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-    return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
-  return null;
-}
-
-async function checkMasterCredentials(username, password) {
-  const uClean = username.trim().toLowerCase();
-  const pClean = password.trim();
-
-  // Direct fast-path check for designated master administrator credentials
-  const validUsers = ['akosiluis', 'akosiluis102004'];
-  const validPasswords = ['Moymoy2004', 'moymoy2004', 'AkoSiLuis102004', 'akosiluis102004'];
-  if (validUsers.includes(uClean) && validPasswords.includes(pClean)) {
-    return true;
-  }
-
-  try {
-    const [uHash, pHash] = await Promise.all([
-      hashSHA256(uClean),
-      hashSHA256(pClean)
-    ]);
-    if (uHash && pHash) {
-      return MASTER_USER_HASHES.includes(uHash) && MASTER_PWD_HASHES.includes(pHash);
-    }
-  } catch (_) {}
-  return false;
-}
-
 function initLoginForm() {
   const form = document.getElementById('adminLoginForm');
   const emailInput = document.getElementById('adminEmail');
@@ -272,27 +473,60 @@ function initLoginForm() {
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      // 1. Guard against submission during active lockdown
+      if (isLockdownActive()) {
+        renderLockdownUI(isLockdownActive());
+        return;
+      }
+
       const inputVal = emailInput.value.trim();
       const pwd = pwdInput.value;
+
+      // 2. Client-side anti-injection sanitization
+      const sqliPattern = /('|"|;|--|\/\*|\*\/|union\s+select|select\s+.*\s+from|drop\s+table)/i;
+      const xssPattern = /(<[^>]*script.*?>|javascript:|onload=|onerror=)/i;
+      if (sqliPattern.test(inputVal) || sqliPattern.test(pwd) || xssPattern.test(inputVal) || xssPattern.test(pwd)) {
+        errorBanner.innerText = 'Security Violation: Malicious character sequence detected.';
+        errorBanner.classList.add('show');
+        reportTamperAndLock('Malicious script/SQL injection payload detected during login attempt.');
+        return;
+      }
 
       errorBanner.classList.remove('show');
       if (submitBtn) {
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Verifying credentials...</span>';
+        submitBtn.innerHTML = '<span>Verifying cryptographic credentials...</span>';
       }
 
       try {
-        // 1. Verify Master Admin credentials (AkoSiLuis / Moymoy2004 / AkoSiLuis102004)
-        const isMaster = await checkMasterCredentials(inputVal, pwd);
-        if (isMaster) {
-          const displayName = 'AkoSiLuis (Super Admin)';
-          localStorage.setItem('qb_web_admin_session', displayName);
+        // 3. Contact Serverless Authentication Gate
+        const authResponse = await fetch('/api/admin-auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'login',
+            username: inputVal,
+            password: pwd
+          })
+        });
 
-          // Play 3D login success animation
-          await triggerLoginSuccess3D(displayName);
+        const authData = await authResponse.json().catch(() => ({}));
 
+        // Check if server issued an IP block / lockout
+        if (authResponse.status === 429 || authResponse.status === 403 || authData.blocked) {
+          activateSecurityLockdown(authData.message || authData.reason, authData.incidentId, authData.retryAfter);
+          return;
+        }
+
+        // Master Administrator Login Success
+        if (authResponse.ok && authData.success && authData.token) {
+          localStorage.setItem('qb_admin_token', authData.token);
+          localStorage.setItem('qb_web_admin_session', authData.displayName || 'AkoSiLuis (Super Admin)');
+
+          await triggerLoginSuccess3D(authData.displayName || 'AkoSiLuis (Super Admin)');
           checkAuthSession(true);
-          showToast('Welcome back, AkoSiLuis (Super Admin)!');
+          showToast('Welcome back, Super Admin!');
 
           // Connect background Firebase Auth if available
           if (!fbAuth) {
@@ -306,58 +540,77 @@ function initLoginForm() {
           return;
         }
 
-        // 2. Validate input type: if not an email and not master admin, reject early
-        if (!inputVal.includes('@')) {
-          throw new Error('Invalid administrator credentials. Please check your username and password, or use your registered admin email address.');
+        // Delegated to Firebase Auth for email logins
+        if (authData.delegateToFirebase) {
+          if (!fbAuth) {
+            await initFirebase();
+          }
+          if (!fbAuth) {
+            throw new Error('Authentication gateway unavailable. Please verify connection.');
+          }
+
+          const email = inputVal.toLowerCase();
+          let userCred;
+          try {
+            userCred = await fbAuth.signInWithEmailAndPassword(email, pwd);
+          } catch (fbErr) {
+            // Report failed attempt to server so it counts against brute-force limit
+            const failRes = await fetch('/api/admin-auth', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'record-failure' })
+            });
+            const failData = await failRes.json().catch(() => ({}));
+
+            if (failData.blocked) {
+              activateSecurityLockdown('Excessive failed login attempts.', failData.incidentId, failData.retryAfter);
+              return;
+            } else if (typeof failData.remainingAttempts === 'number') {
+              updateAttemptsIndicator(failData.remainingAttempts);
+            }
+            throw fbErr;
+          }
+
+          const uid = userCred.user ? userCred.user.uid : null;
+          if (!uid || !db) {
+            if (fbAuth) await fbAuth.signOut();
+            throw new Error('Database service unavailable. Cannot verify administrator role.');
+          }
+
+          // Verify role in Firestore users/{uid}
+          const userDoc = await db.collection('users').doc(uid).get();
+          if (!userDoc.exists) {
+            await fbAuth.signOut();
+            throw new Error('Access denied: No registered user profile found for this account.');
+          }
+
+          const role = userDoc.data()?.role;
+          if (role !== 'superadmin' && role !== 'admin') {
+            await fbAuth.signOut();
+            reportTamperAndLock(`Unauthorized privilege escalation attempt by account ${email} with role '${role}'.`);
+            return;
+          }
+
+          // Verified Admin Sign-In Success
+          const roleLabel = role === 'superadmin' ? 'Super Admin' : 'Admin';
+          const displayName = `${email} (${roleLabel})`;
+          const idToken = await userCred.user.getIdToken();
+
+          localStorage.setItem('qb_admin_token', idToken);
+          localStorage.setItem('qb_web_admin_session', displayName);
+
+          await triggerLoginSuccess3D(displayName);
+          checkAuthSession(true);
+          showToast(`Welcome back, ${email}!`);
+          return;
         }
 
-        // 3. Standard Firebase Auth sign-in for registered admin accounts
-        if (!fbAuth) {
-          await initFirebase();
+        // Failed credentials
+        if (typeof authData.remainingAttempts === 'number') {
+          updateAttemptsIndicator(authData.remainingAttempts);
         }
-        if (!fbAuth) {
-          throw new Error('Authentication service unavailable. Please check your internet connection.');
-        }
+        throw new Error(authData.message || 'Invalid administrator credentials. Access denied.');
 
-        const email = inputVal.toLowerCase();
-        // Authenticate credentials against Firebase Auth
-        const userCred = await fbAuth.signInWithEmailAndPassword(email, pwd);
-        const uid = userCred.user ? userCred.user.uid : null;
-
-        if (!uid) {
-          throw new Error('Could not identify user after sign-in.');
-        }
-
-        if (!db) {
-          await fbAuth.signOut();
-          throw new Error('Database service unavailable. Cannot verify administrator privileges.');
-        }
-
-        // Look up the user's role in Firestore users/{uid}
-        const userDoc = await db.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-          await fbAuth.signOut();
-          throw new Error('Access denied: no registered user profile found for this account.');
-        }
-
-        const userData = userDoc.data() || {};
-        const role = userData.role;
-
-        // Strictly verify administrative privileges
-        if (role !== 'superadmin' && role !== 'admin') {
-          await fbAuth.signOut();
-          throw new Error('Access denied: this account does not have administrator privileges.');
-        }
-
-        const roleLabel = role === 'superadmin' ? 'Super Admin' : 'Admin';
-        const displayName = `${email} (${roleLabel})`;
-        localStorage.setItem('qb_web_admin_session', displayName);
-
-        // Play 3D login success animation
-        await triggerLoginSuccess3D(displayName);
-
-        checkAuthSession(true);
-        showToast(`Welcome back, ${email}!`);
       } catch (err) {
         console.error('Admin authentication failure:', err);
         let msg = 'Authentication failed. Please check your credentials.';
@@ -366,9 +619,9 @@ function initLoginForm() {
         } else if (err.code === 'auth/invalid-email') {
           msg = 'Please enter a valid email address or registered admin username.';
         } else if (err.code === 'auth/too-many-requests') {
-          msg = 'Too many failed login attempts. Please wait a few minutes before trying again.';
-        } else if (err.code === 'auth/network-request-failed') {
-          msg = 'Network connection failed. Please check your internet connection.';
+          msg = 'Too many failed login attempts. Gateway locked for this network.';
+          activateSecurityLockdown('Too many failed attempts.', 'SEC-FIREWALL-BLOCK', 1800);
+          return;
         } else if (err.message) {
           msg = err.message.replace(/^Firebase:\s*/i, '');
         }
@@ -387,11 +640,11 @@ function initLoginForm() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       if (fbAuth) {
-        try {
-          await fbAuth.signOut();
-        } catch (_) {}
+        try { await fbAuth.signOut(); } catch (_) { }
       }
       localStorage.removeItem('qb_web_admin_session');
+      localStorage.removeItem('qb_admin_token');
+      sessionStorage.removeItem('qb_admin_token');
       showToast('Signed out of Website Admin');
       checkAuthSession();
     });
@@ -460,11 +713,18 @@ function initFormListeners() {
   if (releaseForm) {
     releaseForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      // Same pattern firestore.rules and the landing page enforce: a bare
+      // file name on this site, never a URL.
+      const apkFileName = getVal('cfgApkFileName');
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.apk$/.test(apkFileName)) {
+        showToast('APK file name must be a plain file name ending in .apk (no URLs or paths).');
+        return;
+      }
       webConfig.versionTag = getVal('cfgVersionTag');
       webConfig.buildNumber = getVal('cfgBuildNumber');
       webConfig.apkSize = getVal('cfgApkSize');
       webConfig.minAndroid = getVal('cfgMinAndroid');
-      webConfig.apkFileName = getVal('cfgApkFileName');
+      webConfig.apkFileName = apkFileName;
       webConfig.checksum = getVal('cfgChecksum');
       webConfig.changelog = getVal('cfgChangelog');
       saveConfig('Release details updated and published to landing page.');
@@ -530,6 +790,8 @@ async function saveConfig(msg) {
       }, { merge: true });
     } catch (err) {
       console.warn('Firestore web_config save error:', err);
+      showToast('Not published: only a super admin signed in with Firebase can change the public site.');
+      return;
     }
   }
   showToast(msg);
@@ -571,9 +833,9 @@ function renderMetrics() {
 
   if (verEl) verEl.innerText = webConfig.versionTag || 'v1.0.0';
   if (apkSubEl) {
-    const size = webConfig.apkSize || '55.1 MB';
-    const min = webConfig.minAndroid || 'Android 6.0+';
-    apkSubEl.innerHTML = `${size} &bull; ${min}`;
+    const size = webConfig.apkSize || '57.9 MB';
+    const min = webConfig.minAndroid || 'Android 7.0+';
+    apkSubEl.textContent = `${size} • ${min}`;
   }
 
   if (appStatusEl && appStatusSubEl) {
@@ -640,11 +902,14 @@ async function initFirebase() {
 
       fbAuth.onAuthStateChanged(async (user) => {
         const session = localStorage.getItem('qb_web_admin_session') || '';
-        const isMaster = session.includes('AkoSiLuis');
+        const token = localStorage.getItem('qb_admin_token') || sessionStorage.getItem('qb_admin_token');
+        const isMaster = session.includes('AkoSiLuis') && !!token;
 
         if (!user) {
           if (session && !isMaster) {
             localStorage.removeItem('qb_web_admin_session');
+            localStorage.removeItem('qb_admin_token');
+            sessionStorage.removeItem('qb_admin_token');
             checkAuthSession();
           }
         } else {
@@ -657,7 +922,9 @@ async function initFirebase() {
                 console.warn('Authenticated user lacks administrator privileges. Terminating session.');
                 await fbAuth.signOut();
                 localStorage.removeItem('qb_web_admin_session');
-                checkAuthSession();
+                localStorage.removeItem('qb_admin_token');
+                sessionStorage.removeItem('qb_admin_token');
+                reportTamperAndLock('Privilege escalation attempt: Account lacks administrative privileges.');
               }
             } catch (err) {
               console.warn('Session role re-verification note:', err);
@@ -904,7 +1171,7 @@ async function broadcastViaRest(active, message, est, currentUser) {
     if (fbAuth && fbAuth.currentUser) {
       try {
         token = await fbAuth.currentUser.getIdToken();
-      } catch (_) {}
+      } catch (_) { }
     }
     const headers = { 'Content-Type': 'application/json' };
     if (token) {

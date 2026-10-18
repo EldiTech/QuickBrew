@@ -24,6 +24,7 @@ import '../widgets/brew_filter_row.dart';
 import '../widgets/brew_grid.dart';
 import '../widgets/brew_sheet.dart';
 import '../widgets/stagger.dart';
+import '../widgets/brew_transitions.dart';
 import 'order_wizard_screen.dart';
 
 /// Where View menu goes: one shop's board, live from Firestore.
@@ -45,12 +46,7 @@ import 'order_wizard_screen.dart';
 /// what the brief asked for — select a partner and begin browsing its menu in
 /// one step — and the wizard is what happens after they have chosen.
 class MenuScreen extends StatefulWidget {
-  const MenuScreen({
-    super.key,
-    required this.shop,
-    this.session,
-    this.counter,
-  });
+  const MenuScreen({super.key, required this.shop, this.session, this.counter});
 
   /// The shop as the card the reader just tapped had it — its name and its
   /// hours included. Handed over whole rather than as a partner plus a status
@@ -72,17 +68,9 @@ class MenuScreen extends StatefulWidget {
     BrewSession? session,
     BrewCounter? counter,
   }) {
-    final duration = reduced ? Duration.zero : BrewMotion.transit;
-    return PageRouteBuilder<void>(
-      transitionDuration: duration,
-      reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          MenuScreen(shop: shop, session: session, counter: counter),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
-      ),
+    return brewPageRoute<void>(
+      reduced: reduced,
+      child: MenuScreen(shop: shop, session: session, counter: counter),
     );
   }
 
@@ -138,9 +126,9 @@ class _MenuScreenState extends State<MenuScreen> {
 
   /// Whether Buy should refuse rather than open the wizard.
   bool get _atOrderCap => switch (_activeOrderCount) {
-        final count? => count >= _maxActiveOrders,
-        null => false,
-      };
+    final count? => count >= _maxActiveOrders,
+    null => false,
+  };
 
   @override
   void initState() {
@@ -153,8 +141,9 @@ class _MenuScreenState extends State<MenuScreen> {
     final counter = widget.counter;
     final session = widget.session;
     if (counter != null && session != null) {
-      _activeOrdersSubscription =
-          counter.activeOrders(session.uid).listen((orders) {
+      _activeOrdersSubscription = counter.activeOrders(session.uid).listen((
+        orders,
+      ) {
         if (!mounted) return;
         setState(() => _activeOrderCount = orders.length);
       });
@@ -184,12 +173,14 @@ class _MenuScreenState extends State<MenuScreen> {
 
   List<BrewMenuItem> _byCategory(List<BrewMenuItem> items) {
     if (_category == _allCategories) return items;
-    final inCategory =
-        items.where((item) => item.category == _category).toList();
+    final inCategory = items
+        .where((item) => item.category == _category)
+        .toList();
     if (inCategory.isEmpty) return items;
     if (_subCategory == _allCategories) return inCategory;
-    final inSub =
-        inCategory.where((item) => item.subCategory == _subCategory).toList();
+    final inSub = inCategory
+        .where((item) => item.subCategory == _subCategory)
+        .toList();
     return inSub.isEmpty ? inCategory : inSub;
   }
 
@@ -220,143 +211,146 @@ class _MenuScreenState extends State<MenuScreen> {
         child: BrewBackground(
           child: StreamBuilder<List<BrewMenuItem>>(
             stream: _menu,
-          builder: (context, snapshot) {
-            final items = snapshot.data;
-            final failed = snapshot.hasError || _menu == null;
-            final categories = BrewMenuItem.categoriesOf(items ?? const []);
-            final filtered = categories.length > 1;
+            builder: (context, snapshot) {
+              final items = snapshot.data;
+              final failed = snapshot.hasError || _menu == null;
+              final categories = BrewMenuItem.categoriesOf(items ?? const []);
+              final filtered = categories.length > 1;
 
-            // Sliced to the current page here rather than inside [_board], so
-            // this frame's stagger count — which has to be fixed before the
-            // first [StaggerItem] below reads it — reflects the row count that
-            // will actually be drawn, not the whole filtered board.
-            final visible = items == null ? null : _visible(items);
-            final pageCount =
-                visible == null ? 0 : (visible.length / _pageSize).ceil();
-            final page =
-                pageCount == 0 ? 0 : _page.clamp(0, pageCount - 1);
-            final pageItems =
-                visible?.skip(page * _pageSize).take(_pageSize).toList();
+              // Sliced to the current page here rather than inside [_board], so
+              // this frame's stagger count — which has to be fixed before the
+              // first [StaggerItem] below reads it — reflects the row count that
+              // will actually be drawn, not the whole filtered board.
+              final visible = items == null ? null : _visible(items);
+              final pageCount = visible == null
+                  ? 0
+                  : (visible.length / _pageSize).ceil();
+              final page = pageCount == 0 ? 0 : _page.clamp(0, pageCount - 1);
+              final pageItems = visible
+                  ?.skip(page * _pageSize)
+                  .take(_pageSize)
+                  .toList();
 
-            // Header, context tag, headline, status line, search field, filter
-            // row where there is one, then a row each of the current page.
-            final tagIndex = 1;
-            final headlineIndex = 2;
-            final statusIndex = 3;
-            final searchIndex = 4;
-            final filterIndex = searchIndex + 1;
-            final base = filterIndex + (filtered ? 1 : 0);
+              // Header, context tag, headline, status line, search field, filter
+              // row where there is one, then a row each of the current page.
+              final tagIndex = 1;
+              final headlineIndex = 2;
+              final statusIndex = 3;
+              final searchIndex = 4;
+              final filterIndex = searchIndex + 1;
+              final base = filterIndex + (filtered ? 1 : 0);
 
-            return StaggerGroup(
-              itemCount: base + (pageItems?.length ?? 1),
-              reveal: true,
-              reduced: reduced,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  left: BrewSpace.gutter,
-                  right: BrewSpace.gutter,
-                  top: math.max(media.padding.top, BrewSpace.minInset) +
-                      BrewSpace.headerClearance,
-                  bottom: math.max(
-                    media.padding.bottom,
-                    BrewSpace.bottomGroupInset,
+              return StaggerGroup(
+                itemCount: base + (pageItems?.length ?? 1),
+                reveal: true,
+                reduced: reduced,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    left: BrewSpace.gutter,
+                    right: BrewSpace.gutter,
+                    top:
+                        math.max(media.padding.top, BrewSpace.minInset) +
+                        BrewSpace.headerClearance,
+                    bottom: math.max(
+                      media.padding.bottom,
+                      BrewSpace.bottomGroupInset,
+                    ),
                   ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    StaggerItem(index: 0, child: _header(context)),
-                    SizedBox(height: brewBlockGap(compact)),
-                    StaggerItem(
-                      index: tagIndex,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: BrewColor.cream.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: BrewColor.cream.withValues(alpha: 0.14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      StaggerItem(index: 0, child: _header(context)),
+                      SizedBox(height: brewBlockGap(compact)),
+                      StaggerItem(
+                        index: tagIndex,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: BrewColor.cream.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: BrewColor.cream.withValues(alpha: 0.14),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.local_cafe_rounded,
+                                size: 12,
+                                color: BrewColor.sageLight,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'ROASTER CATALOG • LIVE MENU',
+                                style: BrewType.mono.copyWith(
+                                  fontSize: 9.5,
+                                  letterSpacing: 1.4,
+                                  color: BrewColor.sageLight,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.local_cafe_rounded,
-                              size: 12,
-                              color: BrewColor.sageLight,
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              'ROASTER CATALOG • LIVE MENU',
-                              style: BrewType.mono.copyWith(
-                                fontSize: 9.5,
-                                letterSpacing: 1.4,
-                                color: BrewColor.sageLight,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(height: BrewSpace.grid),
+                      StaggerItem(
+                        index: headlineIndex,
+                        child: Text(
+                          shop.displayName,
+                          style: BrewType.displayAt(compact ? 28 : 34),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: BrewSpace.grid),
-                    StaggerItem(
-                      index: headlineIndex,
-                      child: Text(
-                        shop.displayName,
-                        style: BrewType.displayAt(compact ? 28 : 34),
-                      ),
-                    ),
-                    const SizedBox(height: BrewSpace.grid),
-                    StaggerItem(
-                      index: statusIndex,
-                      child: Text(
-                        shop.displayDescription.isEmpty
-                            ? shop.status.label
-                            : '${shop.displayDescription} · ${shop.status.label}',
-                        style: BrewType.rowBody.copyWith(
-                          color: BrewColor.cream.withValues(alpha: 0.8),
+                      const SizedBox(height: BrewSpace.grid),
+                      StaggerItem(
+                        index: statusIndex,
+                        child: Text(
+                          shop.displayDescription.isEmpty
+                              ? shop.status.label
+                              : '${shop.displayDescription} · ${shop.status.label}',
+                          style: BrewType.rowBody.copyWith(
+                            color: BrewColor.cream.withValues(alpha: 0.8),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: BrewSpace.grid * 2),
-                    StaggerItem(
-                      index: searchIndex,
-                      child: _MenuSearchField(
-                        controller: _search,
-                        onChanged: _onQueryChanged,
-                      ),
-                    ),
-                    if (filtered) ...[
                       const SizedBox(height: BrewSpace.grid * 2),
                       StaggerItem(
-                        index: filterIndex,
-                        child: _filters(items!, categories),
+                        index: searchIndex,
+                        child: _MenuSearchField(
+                          controller: _search,
+                          onChanged: _onQueryChanged,
+                        ),
+                      ),
+                      if (filtered) ...[
+                        const SizedBox(height: BrewSpace.grid * 2),
+                        StaggerItem(
+                          index: filterIndex,
+                          child: _filters(items!, categories),
+                        ),
+                      ],
+                      const SizedBox(height: BrewSpace.grid * 3),
+                      ..._board(
+                        items,
+                        pageItems: pageItems,
+                        failed: failed,
+                        base: base,
+                        page: page,
+                        pageCount: pageCount,
                       ),
                     ],
-                    const SizedBox(height: BrewSpace.grid * 3),
-                    ..._board(
-                      items,
-                      pageItems: pageItems,
-                      failed: failed,
-                      base: base,
-                      page: page,
-                      pageCount: pageCount,
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   /// The section chips, bled past the gutter so the row runs off both edges —
   /// the one place on this screen where something is allowed to, because a
@@ -427,9 +421,7 @@ class _MenuScreenState extends State<MenuScreen> {
     if (pageItems == null || pageItems.isEmpty) {
       // No product on the board matches the search or filter in play, as
       // opposed to the board itself being empty — the case just above.
-      return [
-        Text('No drinks match that search.', style: BrewType.rowBody),
-      ];
+      return [Text('No drinks match that search.', style: BrewType.rowBody)];
     }
 
     return [
@@ -458,8 +450,9 @@ class _MenuScreenState extends State<MenuScreen> {
           page: page,
           pageCount: pageCount,
           onPrevious: page > 0 ? () => setState(() => _page = page - 1) : null,
-          onNext:
-              page < pageCount - 1 ? () => setState(() => _page = page + 1) : null,
+          onNext: page < pageCount - 1
+              ? () => setState(() => _page = page + 1)
+              : null,
         ),
       ],
     ];
@@ -515,10 +508,7 @@ class _MenuScreenState extends State<MenuScreen> {
 }
 
 class _MenuSearchField extends StatefulWidget {
-  const _MenuSearchField({
-    required this.controller,
-    required this.onChanged,
-  });
+  const _MenuSearchField({required this.controller, required this.onChanged});
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
@@ -888,9 +878,7 @@ class _SecondaryCardPillState extends State<_SecondaryCardPill> {
               ? BrewColor.cream.withValues(alpha: 0.14)
               : BrewColor.cream.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: BrewColor.cream.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: BrewColor.cream.withValues(alpha: 0.18)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -959,10 +947,7 @@ class _PrimaryCardPillState extends State<_PrimaryCardPill> {
                 : const [Color(0xFF4C8058), Color(0xFF386343)],
           ),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: const Color(0xFF72A880),
-            width: 1.2,
-          ),
+          border: Border.all(color: const Color(0xFF72A880), width: 1.2),
           boxShadow: const [
             BoxShadow(
               color: Color(0x40386343),
@@ -974,11 +959,7 @@ class _PrimaryCardPillState extends State<_PrimaryCardPill> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              widget.icon,
-              size: 13,
-              color: BrewColor.cream,
-            ),
+            Icon(widget.icon, size: 13, color: BrewColor.cream),
             const SizedBox(width: 4),
             Text(
               widget.label,
@@ -1068,7 +1049,9 @@ class _MenuCardPrices extends StatelessWidget {
         children: [
           for (final (index, (size, price)) in sizeLines.indexed) ...[
             if (index > 0) const SizedBox(width: BrewSpace.grid * 0.5),
-            Expanded(child: _MenuCardPriceChip(size: size, price: price)),
+            Expanded(
+              child: _MenuCardPriceChip(size: size, price: price),
+            ),
           ],
         ],
       ),
@@ -1104,8 +1087,11 @@ class _MenuCardPriceChip extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text(
           '${size.label.characters.first.toUpperCase()} $price',
-          style: BrewType.mono
-              .copyWith(color: BrewColor.cream, fontSize: 13, height: 1.2),
+          style: BrewType.mono.copyWith(
+            color: BrewColor.cream,
+            fontSize: 13,
+            height: 1.2,
+          ),
           maxLines: 1,
         ),
       ),
@@ -1184,14 +1170,17 @@ class _MenuItemDetailDialog extends StatelessWidget {
                                         item.imageBytes!,
                                         fit: BoxFit.cover,
                                         errorBuilder: (context, error, stack) =>
-                                            _DetailPlaceholder(category: category),
+                                            _DetailPlaceholder(
+                                              category: category,
+                                            ),
                                       ),
                               ),
                               Positioned(
                                 top: BrewSpace.grid,
                                 right: BrewSpace.grid,
                                 child: _CloseMark(
-                                  onPressed: () => Navigator.of(context).maybePop(),
+                                  onPressed: () =>
+                                      Navigator.of(context).maybePop(),
                                 ),
                               ),
                             ],
@@ -1207,11 +1196,15 @@ class _MenuItemDetailDialog extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (category != null) ...[
-                                  Text(category.toUpperCase(), style: BrewType.mono),
+                                  Text(
+                                    category.toUpperCase(),
+                                    style: BrewType.mono,
+                                  ),
                                   const SizedBox(height: BrewSpace.grid),
                                 ],
                                 Text(item.name, style: BrewType.displayAt(24)),
-                                if (item.description case final description?) ...[
+                                if (item.description
+                                    case final description?) ...[
                                   const SizedBox(height: BrewSpace.grid),
                                   Text(description, style: BrewType.rowBody),
                                 ],
@@ -1222,13 +1215,13 @@ class _MenuItemDetailDialog extends StatelessWidget {
                                 ],
                                 if (price != null || sizeLines.isNotEmpty) ...[
                                   SizedBox(height: BrewSpace.grid * 2.5),
-                                  Container(height: 1, color: BrewColor.hairline),
+                                  Container(
+                                    height: 1,
+                                    color: BrewColor.hairline,
+                                  ),
                                   SizedBox(height: BrewSpace.grid * 2.5),
                                   if (price != null)
-                                    Text(
-                                      price,
-                                      style: BrewType.displayAt(20),
-                                    ),
+                                    Text(price, style: BrewType.displayAt(20)),
                                   if (sizeLines.isNotEmpty)
                                     _PriceCardGrid(sizeLines: sizeLines),
                                 ],
@@ -1261,10 +1254,7 @@ class _DetailPlaceholder extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1B3524),
-            Color(0xFF0F1E14),
-          ],
+          colors: [Color(0xFF1B3524), Color(0xFF0F1E14)],
         ),
       ),
       child: Center(
@@ -1372,7 +1362,9 @@ class _PriceCardGrid extends StatelessWidget {
         children: [
           for (final (index, (size, price)) in sizeLines.indexed) ...[
             if (index > 0) const SizedBox(width: BrewSpace.grid),
-            Expanded(child: _PriceCard(size: size, price: price)),
+            Expanded(
+              child: _PriceCard(size: size, price: price),
+            ),
           ],
         ],
       ),
@@ -1464,10 +1456,14 @@ class _MenuCardImage extends StatelessWidget {
 
   static IconData iconForCategory(String? category) {
     final cat = (category ?? '').toLowerCase();
-    if (cat.contains('iced') || cat.contains('blended') || cat.contains('frappe')) {
+    if (cat.contains('iced') ||
+        cat.contains('blended') ||
+        cat.contains('frappe')) {
       return Icons.ac_unit_rounded;
     }
-    if (cat.contains('tea') || cat.contains('refresher') || cat.contains('matcha')) {
+    if (cat.contains('tea') ||
+        cat.contains('refresher') ||
+        cat.contains('matcha')) {
       return Icons.emoji_food_beverage_rounded;
     }
     return Icons.local_cafe_rounded;
@@ -1499,10 +1495,7 @@ class _MenuCardImage extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    const Color(0x00000000),
-                    const Color(0xEB132218),
-                  ],
+                  colors: [const Color(0x00000000), const Color(0xEB132218)],
                 ),
               ),
             ),
@@ -1561,10 +1554,7 @@ class _MenuCardImage extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1B3524),
-            Color(0xFF0F1E14),
-          ],
+          colors: [Color(0xFF1B3524), Color(0xFF0F1E14)],
         ),
       ),
       child: Stack(

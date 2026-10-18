@@ -271,6 +271,38 @@ body {
   pointer-events: none;
 }
 
+.login-security-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.login-security-indicator .security-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-sage);
+  box-shadow: 0 0 8px var(--accent-sage);
+  transition: all 0.3s ease;
+}
+
+.login-security-indicator.warning .security-dot {
+  background: var(--accent-amber);
+  box-shadow: 0 0 8px var(--accent-amber);
+}
+
+.login-security-indicator.danger .security-dot {
+  background: var(--accent-red);
+  box-shadow: 0 0 10px var(--accent-red);
+  animation: pulseDot 0.8s infinite alternate;
+}
+
 .login-back-link {
   margin-top: 22px;
   text-align: center;
@@ -285,6 +317,225 @@ body {
 
 .login-back-link a:hover {
   color: var(--ink-cream);
+}
+
+/* ==========================================================================
+   Security Lockdown & IP Block Screen
+   ========================================================================== */
+.security-lockdown-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: #07080A;
+  background-image: radial-gradient(circle at center, rgba(239, 68, 68, 0.16) 0%, rgba(7, 8, 10, 0.98) 75%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+  animation: lockdownFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes lockdownFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.lockdown-ambient-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 500px;
+  height: 500px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  animation: sirenPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes sirenPulse {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); }
+  50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.lockdown-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 520px;
+  background: rgba(15, 17, 21, 0.96);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  border-radius: 24px;
+  padding: 42px 36px;
+  box-shadow: 0 0 60px rgba(239, 68, 68, 0.25), 0 30px 80px rgba(0, 0, 0, 0.85);
+  text-align: center;
+}
+
+.lockdown-icon-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lockdown-shield-icon {
+  width: 36px;
+  height: 36px;
+  color: #EF4444;
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6));
+}
+
+.lockdown-siren-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 26px;
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  animation: sirenRing 1.6s infinite ease-out;
+}
+
+@keyframes sirenRing {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+.lockdown-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #F87171;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 999px;
+  padding: 4px 14px;
+  margin-bottom: 16px;
+}
+
+.lockdown-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.25;
+}
+
+.lockdown-desc {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.lockdown-timer-box {
+  background: rgba(9, 10, 12, 0.85);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 24px;
+}
+
+.lockdown-timer-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #F87171;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.lockdown-countdown {
+  font-family: var(--font-mono);
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: #EF4444;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+  margin-bottom: 6px;
+}
+
+.lockdown-timer-sub {
+  font-size: 0.76rem;
+  color: var(--ink-faint);
+}
+
+.lockdown-details-panel {
+  background: rgba(17, 19, 23, 0.7);
+  border: 1px solid var(--border-glass);
+  border-radius: 12px;
+  padding: 14px 18px;
+  text-align: left;
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+}
+
+.detail-label {
+  font-family: var(--font-mono);
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+
+.detail-val {
+  font-weight: 600;
+  color: var(--ink-cream);
+}
+
+.detail-val.mono {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+}
+
+.detail-val.mono.red {
+  color: #EF4444;
+}
+
+.lockdown-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-lockdown-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  color: #FFFFFF;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+  transition: all 0.2s ease;
+}
+
+.btn-lockdown-exit:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
 }
 
 /* ==========================================================================
@@ -2138,5 +2389,144 @@ input:checked + .slider:before {
 
   .mock-lockout-msg {
     font-size: 0.68rem;
+  }
+}
+
+/* Final responsive polish: compact controls, stable touch targets, and
+   predictable card rhythm across narrow phones. */
+@media (max-width: 768px) {
+  .admin-navbar {
+    position: relative;
+    z-index: 30;
+  }
+
+  .admin-nav-right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .store-status-toggle {
+    width: 100%;
+    min-height: 42px;
+    padding-inline: 10px;
+    white-space: nowrap;
+  }
+
+  .admin-user-menu {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .admin-email-tag {
+    min-width: 0;
+    margin-right: auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-tabs-bar {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    min-height: 50px;
+    background: rgba(9, 10, 12, 0.96);
+    backdrop-filter: blur(14px);
+  }
+
+  .tab-btn {
+    min-height: 48px;
+  }
+
+  .form-control,
+  textarea.form-control,
+  select.form-control {
+    width: 100%;
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .config-card-header {
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-navbar {
+    padding-inline: 12px;
+  }
+
+  .admin-logo-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .admin-brand-title {
+    font-size: 0.92rem;
+  }
+
+  .admin-nav-right {
+    gap: 7px;
+  }
+
+  .store-status-toggle {
+    font-size: 0.66rem;
+  }
+
+  .admin-user-menu {
+    justify-content: stretch;
+  }
+
+  .admin-user-menu .btn-admin-logout {
+    min-height: 38px;
+    padding-inline: 10px;
+    white-space: nowrap;
+  }
+
+  .admin-content-area {
+    padding: 16px 10px 36px;
+  }
+
+  .metrics-row {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .metric-card,
+  .config-card,
+  .applock-hero-status,
+  .applock-master-switch-card,
+  .applock-composer-form {
+    border-radius: 12px;
+  }
+
+  .metric-card {
+    min-height: 116px;
+  }
+
+  .config-card {
+    padding: 17px 13px;
+  }
+
+  .applock-master-switch-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .applock-master-switch-card .switch-toggle {
+    margin-top: 4px;
+  }
+
+  .form-row,
+  .admin-grid-2col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .toast-notice {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    text-align: center;
   }
 }

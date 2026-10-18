@@ -25,7 +25,9 @@ void main() {
     ),
   ];
 
-  Future<FakeFirebaseFirestore> withBoard(List<Map<String, Object?>> items) async {
+  Future<FakeFirebaseFirestore> withBoard(
+    List<Map<String, Object?>> items,
+  ) async {
     final db = FakeFirebaseFirestore();
     for (final item in items) {
       await db
@@ -73,11 +75,10 @@ void main() {
 
   test('leaves the other shop alone', () async {
     final db = await withBoard(const []);
-    await db
-        .collection('shops')
-        .doc(BrewPartner.a.id)
-        .collection('menu')
-        .add({'name': 'Untouched', 'priceCents': 100});
+    await db.collection('shops').doc(BrewPartner.a.id).collection('menu').add({
+      'name': 'Untouched',
+      'priceCents': 100,
+    });
 
     await BrewAdmin(db).importMenu(BrewPartner.b, seed);
 
@@ -104,9 +105,9 @@ void main() {
     expect(failure, isNull);
 
     final items = await BrewCounter(db).menu(BrewPartner.a).first;
-    expect(items.length, 40);
-    expect(items.first.name, 'Americano');
-    expect(items.last.name, 'Tiramisu Matcha');
+    expect(items.length, 42);
+    expect(items.first.category, 'Hello Vietnam');
+    expect(items.last.name, 'Milky Nutella');
   });
 
   group('the filters the board offers', () {

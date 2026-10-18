@@ -32,9 +32,10 @@ void main() {
   Future<FakeFirebaseFirestore> pumpApp(
     WidgetTester tester, {
     Map<String, Object?>? profile,
+    Size size = const Size(390, 844),
   }) async {
     tester.view.devicePixelRatio = 1;
-    tester.view.physicalSize = const Size(390, 844);
+    tester.view.physicalSize = size;
     addTearDown(tester.view.reset);
 
     final db = FakeFirebaseFirestore();
@@ -66,6 +67,22 @@ void main() {
     expect(find.byType(AdminHomeScreen), findsOneWidget);
     expect(find.byType(HomeScreen), findsNothing);
     expect(find.text('Admin dashboard.'), findsOneWidget);
+  });
+
+  testWidgets('the super admin masthead fits a 360dp phone without overflowing',
+      (tester) async {
+    // Wordmark, SUPERADMIN badge and Log out were one row and ran 27px over on
+    // a device. The badge now sits beside the "Admin console" tag.
+    await pumpApp(
+      tester,
+      profile: {'email': 'david@work.com', 'role': 'superadmin'},
+      size: const Size(360, 800),
+    );
+    await settle(tester);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('SUPERADMIN'), findsOneWidget);
+    expect(find.text('LOG OUT'), findsOneWidget);
   });
 
   testWidgets('a super admin sees both stores and the team actions',
@@ -267,6 +284,46 @@ void main() {
     );
 
     expect(find.byType(AdminHomeScreen), findsOneWidget);
+  });
+
+  testWidgets('an unverified email cannot claim the invite addressed to it', (
+    tester,
+  ) async {
+    // Anyone can sign up under an address they do not own. Until the address
+    // is proven, the invite must stay unspent and no role may be written.
+    final db = FakeFirebaseFirestore();
+    await db.collection('invites').doc('david@work.com').set({
+      'role': 'admin',
+      'assignedStore': 'coffee-shop-a',
+      'used': false,
+    });
+
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 844);
+    addTearDown(tester.view.reset);
+
+    final impostor = MockUser(
+      uid: 'impostor',
+      email: 'david@work.com',
+      displayName: 'Not David',
+      isEmailVerified: false,
+    );
+    await tester.pumpWidget(
+      QuickBrewApp(
+        backend: Future.value((
+          auth: BrewAuth(MockFirebaseAuth(signedIn: true, mockUser: impostor)),
+          counter: BrewCounter(db),
+          admin: BrewAdmin(db),
+        )),
+      ),
+    );
+    await settle(tester);
+
+    final written = await db.collection('users').doc('impostor').get();
+    expect(written.exists, isFalse);
+    final invite = await db.collection('invites').doc('david@work.com').get();
+    expect(invite.data()?['used'], isFalse);
+    expect(find.byType(AdminHomeScreen), findsNothing);
   });
 
   testWidgets('an invite already spent grants nothing', (tester) async {

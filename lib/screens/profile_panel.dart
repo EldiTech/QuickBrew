@@ -437,22 +437,7 @@ class _AccountDetailsCard extends StatelessWidget {
             isPlaceholder: !hasEmail,
             copyable: hasEmail,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: BrewSpace.grid * 1.5),
-            child: Container(
-              height: 1,
-              width: double.infinity,
-              color: BrewColor.cream.withValues(alpha: 0.1),
-            ),
-          ),
-          // Membership Access Row
-          _AccountFieldTile(
-            icon: Icons.local_cafe_rounded,
-            label: 'MEMBERSHIP TIER',
-            value: 'Unified Roaster Pass',
-            subtitle: 'Direct queueing & counter tracking at both stores',
-            isPlaceholder: false,
-          ),
+
         ],
       ),
     );

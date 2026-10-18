@@ -12,16 +12,13 @@ import '../../widgets/brew_buttons.dart';
 import '../../widgets/brew_field.dart';
 import '../../widgets/brew_reveal.dart';
 import '../../widgets/brew_sheet.dart';
-// The QR preview, borrowed from the board: a payment code and a menu picture
-// are the same widget's job — bounded bytes in a hairline frame, with a
-// placeholder for the not-yet-uploaded case a form needs.
-import '../../widgets/menu_item_image.dart';
 import '../../widgets/shop_mark.dart';
 import '../../widgets/stagger.dart';
 import 'admin_addons_screen.dart';
 import 'admin_menu_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_transitions.dart';
+import 'admin_whole_menu_screen.dart';
 
 /// One store, end to end: whether it is taking orders, its logo, and the
 /// board — the three things [BrewCounter] reads for the customer side, now
@@ -85,6 +82,11 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
 
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _storyController = TextEditingController();
+  final _weekdayHoursController = TextEditingController();
+  final _weekendHoursController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _contactController = TextEditingController();
 
   /// Set once the identity fields have been primed from the first snapshot.
   ///
@@ -96,6 +98,7 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
   bool _identityPrimed = false;
 
   bool _savingIdentity = false;
+  bool _savingAbout = false;
   bool _savingLogo = false;
   bool _savingQr = false;
 
@@ -121,7 +124,30 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _storyController.dispose();
+    _weekdayHoursController.dispose();
+    _weekendHoursController.dispose();
+    _addressController.dispose();
+    _contactController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveAbout() async {
+    final admin = widget.admin;
+    if (admin == null) return;
+    setState(() => _savingAbout = true);
+    try {
+      await admin.setShopAbout(
+        widget.partner,
+        story: _storyController.text,
+        weekdayHours: _weekdayHoursController.text,
+        weekendHours: _weekendHoursController.text,
+        address: _addressController.text,
+        contact: _contactController.text,
+      );
+    } finally {
+      if (mounted) setState(() => _savingAbout = false);
+    }
   }
 
   BrewShop? _shopOf(List<BrewShop>? shops) =>
@@ -224,7 +250,9 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
       // true for the life of the screen — which holds Replace and Remove
       // disabled with the label stuck on "Saving", and there is no way back
       // except leaving and returning.
-      debugPrint('QuickBrew → could not clear ${widget.partner.id} logo: $error');
+      debugPrint(
+        'QuickBrew → could not clear ${widget.partner.id} logo: $error',
+      );
       failure = 'That did not go through. Try again.';
     }
     if (!mounted) return;
@@ -347,6 +375,17 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
     );
   }
 
+  void _openWholeMenu(BuildContext context) {
+    Navigator.of(context).push(
+      AdminWholeMenuScreen.route(
+        reduced: MediaQuery.disableAnimationsOf(context),
+        partner: widget.partner,
+        admin: widget.admin,
+        counter: widget.counter,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
@@ -373,17 +412,23 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
                 _nameController.text = shop.name ?? shop.partner.name;
                 _descriptionController.text =
                     shop.description ?? shop.partner.description;
+                _storyController.text = shop.story ?? '';
+                _weekdayHoursController.text = shop.weekdayHours ?? '';
+                _weekendHoursController.text = shop.weekendHours ?? '';
+                _addressController.text = shop.address ?? '';
+                _contactController.text = shop.contact ?? '';
                 _identityPrimed = true;
               }
 
-              final preview = shop ??
+              final preview =
+                  shop ??
                   BrewShop(
                     partner: widget.partner,
                     status: BrewShopStatus.pending,
                   );
 
               return BrewSheet(
-                staggerCount: 6,
+                staggerCount: 7,
                 children: [
                   StaggerItem(index: 0, child: _header(context, preview)),
                   SizedBox(height: brewBlockGap(compact)),
@@ -398,7 +443,9 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
                   const SizedBox(height: BrewSpace.grid * 2),
                   StaggerItem(index: 4, child: _buildCatalogSection(context)),
                   const SizedBox(height: BrewSpace.grid * 2),
-                  StaggerItem(index: 5, child: _buildPaymentCard(preview)),
+                  StaggerItem(index: 5, child: _buildAboutCard(preview)),
+                  const SizedBox(height: BrewSpace.grid * 2),
+                  StaggerItem(index: 6, child: _buildPaymentCard(preview)),
                   const SizedBox(height: BrewSpace.grid * 4),
                 ],
               );
@@ -501,10 +548,7 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
           ],
         ),
         const SizedBox(height: BrewSpace.grid),
-        Text(
-          preview.displayName,
-          style: BrewType.displayAt(compact ? 28 : 34),
-        ),
+        Text(preview.displayName, style: BrewType.displayAt(compact ? 28 : 34)),
         const SizedBox(height: BrewSpace.grid * 0.75),
         Text(
           'Manage your store profile, operating hours, active orders, and customer payment QR.',
@@ -600,9 +644,9 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
                         gap: BrewSpace.grid,
                         child: switch (_logoError) {
                           final message? => Semantics(
-                              liveRegion: true,
-                              child: Text(message, style: BrewType.fieldError),
-                            ),
+                            liveRegion: true,
+                            child: Text(message, style: BrewType.fieldError),
+                          ),
                           null => null,
                         },
                       ),
@@ -645,9 +689,9 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
             gap: BrewSpace.grid,
             child: switch (_identityError) {
               final message? => Semantics(
-                  liveRegion: true,
-                  child: Text(message, style: BrewType.fieldError),
-                ),
+                liveRegion: true,
+                child: Text(message, style: BrewType.fieldError),
+              ),
               null => null,
             },
           ),
@@ -673,13 +717,75 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
   }
 
   Widget _buildOperationsSection(BrewShop preview, BuildContext context) {
+    return _responsiveCardPair(
+      _ordersCard(context),
+      _hoursCard(preview.status),
+    );
+  }
+
+  /// Store actions use a fixed two-column grid: Live Orders / Hours on the
+  /// first row, then The Board / Add-ons on the second row.
+  Widget _responsiveCardPair(Widget first, Widget second) {
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _ordersCard(context)),
+          Expanded(child: first),
           const SizedBox(width: BrewSpace.grid * 2),
-          Expanded(child: _hoursCard(preview.status)),
+          Expanded(child: second),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAboutCard(BrewShop preview) {
+    Widget field(
+      String label,
+      TextEditingController controller,
+      IconData icon,
+    ) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: BrewSpace.grid * 1.5),
+        child: BrewField(
+          label: label,
+          controller: controller,
+          cardStyle: true,
+          leading: Icon(icon, size: 20, color: BrewColor.sageLight),
+          textCapitalization: TextCapitalization.sentences,
+        ),
+      );
+    }
+
+    return _AdminGlassCard(
+      label: 'About & Contact Details',
+      icon: Icons.info_outline_rounded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          field('Our Story', _storyController, Icons.auto_stories_outlined),
+          field(
+            'Monday – Friday hours',
+            _weekdayHoursController,
+            Icons.schedule_rounded,
+          ),
+          field(
+            'Saturday – Sunday hours',
+            _weekendHoursController,
+            Icons.weekend_rounded,
+          ),
+          field('Address', _addressController, Icons.location_on_outlined),
+          field('Contact', _contactController, Icons.phone_outlined),
+          BrewPrimaryButton(
+            label: 'Save About details',
+            busyLabel: _savingAbout ? 'Saving About details…' : null,
+            asPill: true,
+            leading: const Icon(
+              Icons.check_circle_outline_rounded,
+              size: 18,
+              color: Color(0xFF13251A),
+            ),
+            onPressed: widget.admin == null || _savingAbout ? null : _saveAbout,
+          ),
         ],
       ),
     );
@@ -774,9 +880,9 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
             gap: BrewSpace.grid,
             child: switch (_hoursError) {
               final message? => Semantics(
-                  liveRegion: true,
-                  child: Text(message, style: BrewType.fieldError),
-                ),
+                liveRegion: true,
+                child: Text(message, style: BrewType.fieldError),
+              ),
               null => null,
             },
           ),
@@ -785,104 +891,157 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
     );
   }
 
-  Widget _buildCatalogSection(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _boardCard(BuildContext context) {
+    return _AdminGlassCard(
+      label: 'The Board',
+      icon: Icons.restaurant_menu_rounded,
+      onTap: widget.admin == null ? null : () => _openMenu(context),
+      semanticsLabel: 'The board. Manage products.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _AdminGlassCard(
-              label: 'The Board',
-              icon: Icons.restaurant_menu_rounded,
-              onTap: widget.admin == null ? null : () => _openMenu(context),
-              semanticsLabel: 'The board. Manage products.',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Menu products',
-                    style: BrewType.rowTitle.copyWith(fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Pricing, recipes & availability',
-                    style: BrewType.rowBody.copyWith(
-                      fontSize: 12,
-                      color: BrewColor.cream.withValues(alpha: 0.65),
-                    ),
-                  ),
-                  const SizedBox(height: BrewSpace.grid * 2),
-                  Row(
-                    children: [
-                      Text(
-                        'Manage',
-                        style: BrewType.mono.copyWith(
-                          fontSize: 11,
-                          letterSpacing: 1.1,
-                          fontWeight: FontWeight.w600,
-                          color: BrewColor.sageLight,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 14,
-                        color: BrewColor.sageLight,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+          Text(
+            'Menu products',
+            style: BrewType.rowTitle.copyWith(fontSize: 15),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Pricing, recipes & availability',
+            style: BrewType.rowBody.copyWith(
+              fontSize: 12,
+              color: BrewColor.cream.withValues(alpha: 0.65),
             ),
           ),
-          const SizedBox(width: BrewSpace.grid * 2),
-          Expanded(
-            child: _AdminGlassCard(
-              label: 'Add-ons',
-              icon: Icons.tune_rounded,
-              onTap: widget.admin == null ? null : () => _openAddOns(context),
-              semanticsLabel: 'Add-ons. Manage the extras this shop offers.',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Extras & options',
-                    style: BrewType.rowTitle.copyWith(fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Milk, syrups, shots & modifiers',
-                    style: BrewType.rowBody.copyWith(
-                      fontSize: 12,
-                      color: BrewColor.cream.withValues(alpha: 0.65),
-                    ),
-                  ),
-                  const SizedBox(height: BrewSpace.grid * 2),
-                  Row(
-                    children: [
-                      Text(
-                        'Manage',
-                        style: BrewType.mono.copyWith(
-                          fontSize: 11,
-                          letterSpacing: 1.1,
-                          fontWeight: FontWeight.w600,
-                          color: BrewColor.sageLight,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 14,
-                        color: BrewColor.sageLight,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const SizedBox(height: BrewSpace.grid * 2),
+          _manageLink(),
         ],
       ),
+    );
+  }
+
+  Widget _addOnsCard(BuildContext context) {
+    return _AdminGlassCard(
+      label: 'Add-ons',
+      icon: Icons.tune_rounded,
+      onTap: widget.admin == null ? null : () => _openAddOns(context),
+      semanticsLabel: 'Add-ons. Manage the extras this shop offers.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Extras & options',
+            style: BrewType.rowTitle.copyWith(fontSize: 15),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Milk, syrups, shots & modifiers',
+            style: BrewType.rowBody.copyWith(
+              fontSize: 12,
+              color: BrewColor.cream.withValues(alpha: 0.65),
+            ),
+          ),
+          const SizedBox(height: BrewSpace.grid * 2),
+          _manageLink(),
+        ],
+      ),
+    );
+  }
+
+  Widget _manageLink() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Manage',
+          style: BrewType.mono.copyWith(
+            fontSize: 11,
+            letterSpacing: 1.1,
+            fontWeight: FontWeight.w600,
+            color: BrewColor.sageLight,
+          ),
+        ),
+        const SizedBox(width: 6),
+        const Icon(
+          Icons.arrow_forward_rounded,
+          size: 14,
+          color: BrewColor.sageLight,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCatalogSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _responsiveCardPair(_boardCard(context), _addOnsCard(context)),
+        const SizedBox(height: BrewSpace.grid * 2),
+        _AdminGlassCard(
+          label: 'Whole Menu Posters',
+          icon: Icons.menu_book_rounded,
+          onTap: widget.admin == null ? null : () => _openWholeMenu(context),
+          semanticsLabel:
+              'Whole Menu Posters. Manage photographic menu boards.',
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final action = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Configure',
+                    style: BrewType.mono.copyWith(
+                      fontSize: 11,
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFD4A373),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 14,
+                    color: Color(0xFFD4A373),
+                  ),
+                ],
+              );
+              final copy = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Whole Menu Boards',
+                    style: BrewType.rowTitle.copyWith(fontSize: 15),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Upload and configure photographic posters for "View whole menu"',
+                    style: BrewType.rowBody.copyWith(
+                      fontSize: 12,
+                      color: BrewColor.cream.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
+              );
+              if (constraints.maxWidth < 430) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    copy,
+                    const SizedBox(height: BrewSpace.grid),
+                    action,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: copy),
+                  const SizedBox(width: 8),
+                  action,
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -892,124 +1051,150 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
     return _AdminGlassCard(
       label: 'Payment QR Code',
       icon: Icons.qr_code_2_rounded,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(BrewSpace.grid * 2),
-            decoration: BoxDecoration(
-              color: const Color(0x40000000),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: BrewColor.cream.withValues(alpha: 0.08),
-              ),
-            ),
-            child: Row(
+      child: Container(
+        padding: const EdgeInsets.all(BrewSpace.grid * 2),
+        decoration: BoxDecoration(
+          color: const Color(0x40000000),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: BrewColor.cream.withValues(alpha: 0.08)),
+        ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final details = Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFFFFF),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: BrewColor.cream.withValues(alpha: 0.25),
-                      width: 1.5,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.antiAlias,
-                  child: qr != null
-                      ? BrewMenuItemImage(
-                          bytes: qr,
-                          dimension: 100,
-                          placeholder: false,
-                        )
-                      : Container(
-                          color: const Color(0x1A000000),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.qr_code_scanner_rounded,
-                                size: 34,
-                                color: BrewColor.field.withValues(alpha: 0.4),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'NO CODE',
-                                style: BrewType.mono.copyWith(
-                                  fontSize: 8.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: BrewColor.field.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                Text(
+                  'Direct Payment QR',
+                  style: BrewType.rowTitle.copyWith(fontSize: 14),
                 ),
-                const SizedBox(width: BrewSpace.grid * 2),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Direct Payment QR',
-                        style: BrewType.rowTitle.copyWith(fontSize: 14),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        qr == null
-                            ? 'No code uploaded yet. Customers are told to pay at the counter.'
-                            : 'Customers scan this code during checkout and upload receipt proof.',
-                        style: BrewType.rowBody.copyWith(
-                          fontSize: 12,
-                          color: BrewColor.cream.withValues(alpha: 0.65),
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: BrewSpace.grid * 1.5),
-                      Wrap(
-                        spacing: BrewSpace.grid * 1.5,
-                        runSpacing: BrewSpace.grid,
-                        children: [
-                          BrewMonoButton(
-                            label: _savingQr
-                                ? 'Saving…'
-                                : (qr == null ? 'Upload QR' : 'Replace QR'),
-                            semanticsLabel: qr == null
-                                ? 'Upload a payment QR code'
-                                : 'Replace the payment QR code',
-                            onPressed: (_savingQr || widget.admin == null)
-                                ? null
-                                : _pickQr,
-                          ),
-                          if (qr != null)
-                            BrewMonoButton(
-                              label: 'Remove',
-                              semanticsLabel: 'Remove the payment QR code',
-                              ink: BrewColor.alert,
-                              onPressed: (_savingQr || widget.admin == null)
-                                  ? null
-                                  : _removeQr,
-                            ),
-                        ],
-                      ),
-                      BrewReveal(
-                        gap: BrewSpace.grid,
-                        child: switch (_qrError) {
-                          final message? => Semantics(
-                              liveRegion: true,
-                              child: Text(message, style: BrewType.fieldError),
-                            ),
-                          null => null,
-                        },
-                      ),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  qr == null
+                      ? 'No code uploaded yet. Customers are told to pay at the counter.'
+                      : 'Customers scan this code during checkout and upload receipt proof.',
+                  style: BrewType.rowBody.copyWith(
+                    fontSize: 12,
+                    color: BrewColor.cream.withValues(alpha: 0.65),
+                    height: 1.35,
                   ),
+                ),
+                const SizedBox(height: BrewSpace.grid * 1.5),
+                Wrap(
+                  spacing: BrewSpace.grid * 1.5,
+                  runSpacing: BrewSpace.grid,
+                  children: [
+                    BrewMonoButton(
+                      label: _savingQr
+                          ? 'Saving…'
+                          : (qr == null ? 'Upload QR' : 'Replace QR'),
+                      semanticsLabel: qr == null
+                          ? 'Upload a payment QR code'
+                          : 'Replace the payment QR code',
+                      onPressed: (_savingQr || widget.admin == null)
+                          ? null
+                          : _pickQr,
+                    ),
+                    if (qr != null)
+                      BrewMonoButton(
+                        label: 'Remove',
+                        semanticsLabel: 'Remove the payment QR code',
+                        ink: BrewColor.alert,
+                        onPressed: (_savingQr || widget.admin == null)
+                            ? null
+                            : _removeQr,
+                      ),
+                  ],
+                ),
+                BrewReveal(
+                  gap: BrewSpace.grid,
+                  child: switch (_qrError) {
+                    final message? => Semantics(
+                      liveRegion: true,
+                      child: Text(message, style: BrewType.fieldError),
+                    ),
+                    null => null,
+                  },
                 ),
               ],
+            );
+
+            // The old horizontal row squeezed the copy beside the QR on a
+            // phone and the square cover clipped portrait GCash cards. Keep
+            // the preview readable, preserve the source ratio, and let the
+            // controls use the full width when the card gets narrow.
+            final preview = _paymentQrPreview(qr);
+            if (constraints.maxWidth < 520) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(alignment: Alignment.center, child: preview),
+                  const SizedBox(height: BrewSpace.grid * 2),
+                  details,
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                preview,
+                const SizedBox(width: BrewSpace.grid * 2),
+                Expanded(child: details),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _paymentQrPreview(Uint8List? qr) {
+    return Container(
+      width: 160,
+      height: 160,
+      padding: const EdgeInsets.all(BrewSpace.grid),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: BrewColor.cream.withValues(alpha: 0.25),
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      child: qr != null
+          ? Image.memory(
+              qr,
+              width: double.infinity,
+              height: double.infinity,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.medium,
+              errorBuilder: (context, error, stack) => _noQrPreview(),
+            )
+          : _noQrPreview(),
+    );
+  }
+
+  Widget _noQrPreview() {
+    return Container(
+      color: const Color(0x1A000000),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.qr_code_scanner_rounded,
+            size: 34,
+            color: BrewColor.field.withValues(alpha: 0.4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'NO CODE',
+            style: BrewType.mono.copyWith(
+              fontSize: 8.5,
+              fontWeight: FontWeight.w700,
+              color: BrewColor.field.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -1069,26 +1254,30 @@ class _BackPillButtonState extends State<_BackPillButton> {
             if (!_isNavigating) setState(() => _pressed = false);
           },
           child: AnimatedScale(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             scale: _pressed ? 0.94 : (_hovered ? 1.04 : 1.0),
             child: AnimatedContainer(
-              duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+              duration: reduced
+                  ? Duration.zero
+                  : const Duration(milliseconds: 140),
               curve: Curves.easeOutCubic,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 color: _pressed
                     ? const Color(0xB308140C)
                     : (_hovered
-                        ? const Color(0x8808140C)
-                        : const Color(0x6608140C)),
+                          ? const Color(0x8808140C)
+                          : const Color(0x6608140C)),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: _pressed
                       ? BrewColor.cream.withValues(alpha: 0.45)
                       : (_hovered
-                          ? BrewColor.cream.withValues(alpha: 0.28)
-                          : BrewColor.cream.withValues(alpha: 0.16)),
+                            ? BrewColor.cream.withValues(alpha: 0.28)
+                            : BrewColor.cream.withValues(alpha: 0.16)),
                   width: 1.0,
                 ),
               ),
@@ -1096,7 +1285,9 @@ class _BackPillButtonState extends State<_BackPillButton> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   AnimatedSlide(
-                    duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                    duration: reduced
+                        ? Duration.zero
+                        : const Duration(milliseconds: 140),
                     curve: Curves.easeOutCubic,
                     offset: Offset((_pressed || _hovered) ? -0.25 : 0.0, 0.0),
                     child: const Icon(
@@ -1190,7 +1381,9 @@ class _AdminGlassCardState extends State<_AdminGlassCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (widget.label != null || widget.icon != null || widget.trailing != null) ...[
+            if (widget.label != null ||
+                widget.icon != null ||
+                widget.trailing != null) ...[
               Row(
                 children: [
                   if (widget.icon != null) ...[
@@ -1199,13 +1392,19 @@ class _AdminGlassCardState extends State<_AdminGlassCard> {
                   ],
                   if (widget.label != null)
                     Expanded(
-                      child: Text(
-                        widget.label!.toUpperCase(),
-                        style: BrewType.mono.copyWith(
-                          fontSize: 10.5,
-                          letterSpacing: 1.4,
-                          color: BrewColor.sageLight,
-                          fontWeight: FontWeight.w600,
+                      child: FittedBox(
+                        alignment: Alignment.centerLeft,
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          widget.label!.toUpperCase(),
+                          maxLines: 1,
+                          softWrap: false,
+                          style: BrewType.mono.copyWith(
+                            fontSize: 10.5,
+                            letterSpacing: 1.4,
+                            color: BrewColor.sageLight,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -1257,8 +1456,9 @@ class _OpenToggleState extends State<_OpenToggle> {
     final open = widget.open;
 
     return BrewPressable(
-      onPressed:
-          widget.onChanged == null ? null : () => widget.onChanged!(!open),
+      onPressed: widget.onChanged == null
+          ? null
+          : () => widget.onChanged!(!open),
       onPressedChanged: (value) => setState(() => _pressed = value),
       radius: 12,
       pressed: _pressed,
@@ -1278,8 +1478,8 @@ class _OpenToggleState extends State<_OpenToggle> {
               color: _pressed
                   ? BrewColor.fieldFocus
                   : (open
-                      ? BrewColor.sage.withValues(alpha: 0.5)
-                      : BrewColor.alert.withValues(alpha: 0.4)),
+                        ? BrewColor.sage.withValues(alpha: 0.5)
+                        : BrewColor.alert.withValues(alpha: 0.4)),
               width: 1.0,
             ),
             borderRadius: BorderRadius.circular(12),

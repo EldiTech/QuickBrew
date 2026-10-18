@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
+import 'brew_rate_limiter.dart';
 import 'firebase_options.dart';
 
 /// Which input a rejection belongs under.
@@ -82,6 +83,26 @@ class BrewAuthFailure {
     ),
   };
 
+  /// The form is locked by [BrewRateLimiter] and will open again after [wait].
+  ///
+  /// The wait is said as a number rather than "a moment", because a reader told
+  /// to wait an unstated time tries again in five seconds, gets the same answer,
+  /// and concludes the button is broken.
+  factory BrewAuthFailure.lockedOut(Duration wait) {
+    final seconds = (wait.inMilliseconds / 1000).ceil();
+    final String when;
+    if (seconds < 60) {
+      when = seconds == 1 ? '1 second' : '$seconds seconds';
+    } else {
+      final minutes = (seconds / 60).ceil();
+      when = minutes == 1 ? '1 minute' : '$minutes minutes';
+    }
+    return BrewAuthFailure(
+      BrewAuthField.form,
+      'Too many attempts. Try again in $when.',
+    );
+  }
+
   final BrewAuthField field;
 
   /// A sentence, in the body voice — the same register as a validation message,
@@ -96,15 +117,30 @@ class BrewAuthFailure {
 /// `User` would put the SDK's surface — `delete`, `getIdToken`, `reload` — one
 /// dot away from a widget that has no business calling any of it.
 class BrewSession {
-  const BrewSession({required this.uid, this.name, this.email});
+  const BrewSession({
+    required this.uid,
+    this.name,
+    this.email,
+    this.emailVerified = false,
+  });
 
   /// Null when nobody is signed in, so `authStateChanges` and `userChanges` map
   /// straight onto `BrewSession?` without the screens testing two things.
   static BrewSession? of(User? user) => user == null
       ? null
-      : BrewSession(uid: user.uid, name: user.displayName, email: user.email);
+      : BrewSession(
+          uid: user.uid,
+          name: user.displayName,
+          email: user.email,
+          emailVerified: user.emailVerified,
+        );
 
   final String uid;
+
+  /// Whether Firebase has proven [email] belongs to this account. Sign-up does
+  /// not prove it, which is why an admin invite addressed to [email] waits for
+  /// it — see BrewAdmin.ensureProfile and `emailVerified()` in firestore.rules.
+  final bool emailVerified;
 
   /// Whatever they typed into the sign-up form's Name field. Null on an account
   /// created before that field existed, or if `updateDisplayName` failed after
@@ -134,9 +170,27 @@ class BrewSession {
 /// "the form is locally valid"; what happens after that is one call that either
 /// succeeds or comes back with a [BrewAuthFailure] it knows how to display.
 class BrewAuth {
-  BrewAuth(this._auth);
+  BrewAuth(this._auth, {BrewRateLimiter? limiter})
+    : _limiter = limiter ?? BrewRateLimiter();
 
   final FirebaseAuth _auth;
+
+  /// Counts rejected log-ins and sign-ups so a run of them locks the form for a
+  /// while. One limiter, two keys: failing to log in does not cost the reader
+  /// their sign-up attempts, or the other way round.
+  final BrewRateLimiter _limiter;
+
+  static const _signInKey = 'sign-in';
+  static const _signUpKey = 'sign-up';
+
+  /// Whether a rejection is one the reader's attempt earned, and so counts
+  /// toward a lockout.
+  ///
+  /// Not a dropped connection, which says nothing about what they typed, and
+  /// not Firebase's own `too-many-requests`, which is already a lockout —
+  /// counting it would stack ours on top of theirs.
+  static bool _counts(String code) =>
+      code != 'network-request-failed' && code != 'too-many-requests';
 
   /// Who is signed in, now and whenever that changes. Null means nobody.
   ///
@@ -183,6 +237,9 @@ class BrewAuth {
     required String email,
     required String password,
   }) async {
+    final wait = _limiter.retryAfter(_signUpKey);
+    if (wait != null) return BrewAuthFailure.lockedOut(wait);
+
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -193,9 +250,11 @@ class BrewAuth {
       // of it: an account that is real but unnamed is recoverable, whereas
       // treating a failed rename as a failed sign-up would leave the reader
       // being told nothing happened while their account sits on the server.
+      _limiter.recordSuccess(_signUpKey);
       await credential.user?.updateDisplayName(name);
       return null;
     } on FirebaseAuthException catch (error) {
+      if (_counts(error.code)) _limiter.recordFailure(_signUpKey);
       return BrewAuthFailure.fromCode(error.code);
     } catch (error) {
       // Plugin and channel errors reach here. The reader gets the same sentence
@@ -217,10 +276,15 @@ class BrewAuth {
     required String email,
     required String password,
   }) async {
+    final wait = _limiter.retryAfter(_signInKey);
+    if (wait != null) return BrewAuthFailure.lockedOut(wait);
+
     try {
       await _auth.signInWithEmailAndPassword(email: email, password: password);
+      _limiter.recordSuccess(_signInKey);
       return null;
     } on FirebaseAuthException catch (error) {
+      if (_counts(error.code)) _limiter.recordFailure(_signInKey);
       return BrewAuthFailure.fromCode(error.code);
     } catch (error) {
       debugPrint('QuickBrew → log-in failed: $error');
@@ -241,6 +305,21 @@ class BrewAuth {
     } catch (error) {
       debugPrint('QuickBrew → password reset failed: $error');
       return BrewAuthFailure.fromCode('');
+    }
+  }
+
+  /// Mails the signed-in account a link proving it owns its address. Called
+  /// when an admin invite is waiting on that proof — see
+  /// BrewAdmin.ensureProfile. Reports nothing: the invite simply stays
+  /// unclaimed until the link is followed and the reader signs in again.
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+    } catch (error) {
+      debugPrint('QuickBrew → verification email not sent: $error');
     }
   }
 

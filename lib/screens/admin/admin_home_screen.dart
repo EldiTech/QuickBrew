@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart'
-    show BoxShadow, Icon, Icons, Material;
+import 'package:flutter/material.dart' show BoxShadow, Icon, Icons, Material;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -146,10 +145,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             children: [
               StaggerItem(
                 index: 0,
-                child: _Masthead(
-                  onSignOut: widget.onSignOut,
-                  isSuperadmin: _superadmin,
-                ),
+                child: _Masthead(onSignOut: widget.onSignOut),
               ),
               SizedBox(height: brewBlockGap(compact)),
               StaggerItem(
@@ -157,7 +153,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -180,6 +179,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                             ),
                           ),
                         ),
+                        if (_superadmin) const _RoleBadge(),
                       ],
                     ),
                     const SizedBox(height: BrewSpace.grid),
@@ -236,7 +236,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                           StaggerItem(
                             index: storeBase + position,
                             child: _StoreCard(
-                              shop: live
+                              shop:
+                                  live
                                       ?.where((shop) => shop.partner == partner)
                                       .firstOrNull ??
                                   BrewShop(
@@ -267,7 +268,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   child: _ActionRow(
                     icon: Icons.people_alt_rounded,
                     label: 'See all users',
-                    detail: 'Who runs each shop, and every account behind them.',
+                    detail:
+                        'Who runs each shop, and every account behind them.',
                     onTap: () => _openUsers(context),
                   ),
                 ),
@@ -277,7 +279,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   child: _ActionRow(
                     icon: Icons.person_add_alt_1_rounded,
                     label: 'Create an admin',
-                    detail: 'Make an account that manages one of the two stores.',
+                    detail:
+                        'Make an account that manages one of the two stores.',
                     onTap: () => _openInvite(context),
                   ),
                 ),
@@ -324,62 +327,26 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 }
 
-/// The wordmark, role badge, and session controls.
+/// The wordmark and the session control.
+///
+/// The role badge used to sit here too, and the three together were wider than
+/// a 360dp phone's 312dp of content — the row overflowed by 27px. The badge now
+/// rides beside the "Admin console" tag, which has the room (see [_RoleBadge]).
 class _Masthead extends StatelessWidget {
-  const _Masthead({
-    required this.onSignOut,
-    this.isSuperadmin = false,
-  });
+  const _Masthead({required this.onSignOut});
 
   final VoidCallback? onSignOut;
-  final bool isSuperadmin;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Flexible(
-          child: BrewWordmarkRow(),
-        ),
+        const Flexible(child: BrewWordmarkRow()),
         const SizedBox(width: 8),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isSuperadmin) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-                decoration: BoxDecoration(
-                  color: BrewColor.sage.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: BrewColor.sage.withValues(alpha: 0.5),
-                    width: 1.0,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.shield_rounded,
-                      size: 12,
-                      color: BrewColor.sageLight,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      'SUPERADMIN',
-                      style: BrewType.mono.copyWith(
-                        fontSize: 8.5,
-                        letterSpacing: 0.8,
-                        color: BrewColor.sageLight,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-            ],
             BrewPressable(
               onPressed: onSignOut,
               radius: 999,
@@ -426,6 +393,46 @@ class _Masthead extends StatelessWidget {
   }
 }
 
+/// Marks the one account that runs both shops.
+class _RoleBadge extends StatelessWidget {
+  const _RoleBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: BrewColor.sage.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: BrewColor.sage.withValues(alpha: 0.5),
+          width: 1.0,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.shield_rounded,
+            size: 12,
+            color: BrewColor.sageLight,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'SUPERADMIN',
+            style: BrewType.mono.copyWith(
+              fontSize: 8.5,
+              letterSpacing: 0.8,
+              color: BrewColor.sageLight,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// A section's name, in the mono label voice with an icon.
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.label, {this.icon});
@@ -457,7 +464,6 @@ class _SectionLabel extends StatelessWidget {
     );
   }
 }
-
 
 /// One store, as an elevated luxury frosted card with live status and unattended count.
 class _StoreCard extends StatefulWidget {
@@ -507,6 +513,192 @@ class _StoreCardState extends State<_StoreCard> {
     }
   }
 
+  Widget _storeIdentity(BrewShop shop, bool open) {
+    return Row(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: BrewColor.cream.withValues(alpha: 0.12),
+              width: 1.0,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(9),
+            child: BrewShopMark(shop: shop, dimension: _markSize),
+          ),
+        ),
+        const SizedBox(width: BrewSpace.grid * 1.5),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                shop.displayName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: BrewType.rowTitle.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: BrewColor.cream,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: open
+                      ? BrewColor.sage.withValues(alpha: 0.18)
+                      : BrewColor.alert.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: open
+                        ? BrewColor.sage.withValues(alpha: 0.4)
+                        : BrewColor.alert.withValues(alpha: 0.35),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: open ? BrewColor.sageLight : BrewColor.alert,
+                        boxShadow: open
+                            ? const [
+                                BoxShadow(
+                                  color: Color(0x66B7D5B0),
+                                  blurRadius: 4,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      shop.status.label.toUpperCase(),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: BrewType.mono.copyWith(
+                        fontSize: 9.5,
+                        letterSpacing: 1.0,
+                        fontWeight: FontWeight.w700,
+                        color: open ? BrewColor.sageLight : BrewColor.alert,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _storeActions(bool reduced) {
+    return StreamBuilder<List<BrewOrder>>(
+      stream: widget.orders,
+      builder: (context, snapshot) {
+        final unattended = (snapshot.data ?? const <BrewOrder>[])
+            .where((order) => order.stage == BrewOrderStage.received)
+            .length;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (unattended > 0) ...[
+              _UnattendedBadge(count: unattended),
+              const SizedBox(width: 8),
+            ],
+            MouseRegion(
+              onEnter: (_) => setState(() => _configureHovered = true),
+              onExit: (_) => setState(() => _configureHovered = false),
+              cursor: SystemMouseCursors.click,
+              child: AnimatedScale(
+                duration: reduced
+                    ? Duration.zero
+                    : const Duration(milliseconds: 140),
+                curve: Curves.easeOutCubic,
+                scale: _pressed ? 0.94 : (_configureHovered ? 1.05 : 1.0),
+                child: AnimatedContainer(
+                  duration: reduced
+                      ? Duration.zero
+                      : const Duration(milliseconds: 140),
+                  curve: Curves.easeOutCubic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _pressed
+                        ? BrewColor.sage.withValues(alpha: 0.40)
+                        : (_configureHovered
+                              ? BrewColor.sage.withValues(alpha: 0.28)
+                              : BrewColor.sage.withValues(alpha: 0.12)),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: _pressed
+                          ? BrewColor.sageLight
+                          : (_configureHovered
+                                ? BrewColor.sageLight
+                                : BrewColor.sage.withValues(alpha: 0.35)),
+                      width: 1.0,
+                    ),
+                    boxShadow: (_pressed || _configureHovered)
+                        ? [
+                            BoxShadow(
+                              color: BrewColor.sage.withValues(
+                                alpha: _pressed ? 0.45 : 0.25,
+                              ),
+                              blurRadius: _pressed ? 12 : 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Configure',
+                        style: BrewType.mono.copyWith(
+                          fontSize: 11,
+                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.w600,
+                          color: BrewColor.cream,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      AnimatedSlide(
+                        duration: reduced
+                            ? Duration.zero
+                            : const Duration(milliseconds: 140),
+                        curve: Curves.easeOutCubic,
+                        offset: Offset(
+                          (_pressed || _configureHovered) ? 0.30 : 0.0,
+                          0.0,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 13,
+                          color: BrewColor.sageLight,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final reduced = MediaQuery.disableAnimationsOf(context);
@@ -532,7 +724,9 @@ class _StoreCardState extends State<_StoreCard> {
             if (!_isNavigating) setState(() => _pressed = false);
           },
           child: AnimatedScale(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             scale: _pressed ? 0.985 : (_cardHovered ? 1.006 : 1.0),
             child: AnimatedContainer(
@@ -543,14 +737,14 @@ class _StoreCardState extends State<_StoreCard> {
                 color: _pressed
                     ? const Color(0xF5182D20)
                     : (_cardHovered
-                        ? const Color(0xF216271C)
-                        : const Color(0xEB132218)),
+                          ? const Color(0xF216271C)
+                          : const Color(0xEB132218)),
                 border: Border.all(
                   color: _pressed
                       ? BrewColor.fieldFocus
                       : (_cardHovered
-                          ? BrewColor.cream.withValues(alpha: 0.22)
-                          : BrewColor.cream.withValues(alpha: 0.12)),
+                            ? BrewColor.cream.withValues(alpha: 0.22)
+                            : BrewColor.cream.withValues(alpha: 0.12)),
                   width: 1.0,
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -564,192 +758,28 @@ class _StoreCardState extends State<_StoreCard> {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: BrewColor.cream.withValues(alpha: 0.12),
-                        width: 1.0,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(9),
-                      child: BrewShopMark(shop: shop, dimension: _markSize),
-                    ),
-                  ),
-                  const SizedBox(width: BrewSpace.grid * 1.5),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final identity = _storeIdentity(shop, open);
+                  final actions = _storeActions(reduced);
+                  if (constraints.maxWidth < 430) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          shop.displayName,
-                          style: BrewType.rowTitle.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: BrewColor.cream,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: open
-                                ? BrewColor.sage.withValues(alpha: 0.18)
-                                : BrewColor.alert.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: open
-                                  ? BrewColor.sage.withValues(alpha: 0.4)
-                                  : BrewColor.alert.withValues(alpha: 0.35),
-                              width: 0.8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: open ? BrewColor.sageLight : BrewColor.alert,
-                                  boxShadow: open
-                                      ? const [
-                                          BoxShadow(
-                                            color: Color(0x66B7D5B0),
-                                            blurRadius: 4,
-                                            spreadRadius: 1,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 5),
-                              Flexible(
-                                child: Text(
-                                  shop.status.label.toUpperCase(),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                  style: BrewType.mono.copyWith(
-                                    fontSize: 9.5,
-                                    letterSpacing: 1.0,
-                                    fontWeight: FontWeight.w700,
-                                    color:
-                                        open ? BrewColor.sageLight : BrewColor.alert,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        identity,
+                        const SizedBox(height: BrewSpace.grid * 1.5),
+                        Align(alignment: Alignment.centerRight, child: actions),
                       ],
-                    ),
-                  ),
-                  const SizedBox(width: BrewSpace.grid),
-                  StreamBuilder<List<BrewOrder>>(
-                    stream: widget.orders,
-                    builder: (context, snapshot) {
-                      final unattended = (snapshot.data ?? const <BrewOrder>[])
-                          .where((order) => order.stage == BrewOrderStage.received)
-                          .length;
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (unattended > 0) ...[
-                            _UnattendedBadge(count: unattended),
-                            const SizedBox(width: 8),
-                          ],
-                          MouseRegion(
-                            onEnter: (_) => setState(() => _configureHovered = true),
-                            onExit: (_) => setState(() => _configureHovered = false),
-                            cursor: SystemMouseCursors.click,
-                            child: AnimatedScale(
-                              duration: reduced
-                                  ? Duration.zero
-                                  : const Duration(milliseconds: 140),
-                              curve: Curves.easeOutCubic,
-                              scale: _pressed
-                                  ? 0.94
-                                  : (_configureHovered ? 1.05 : 1.0),
-                              child: AnimatedContainer(
-                                duration: reduced
-                                    ? Duration.zero
-                                    : const Duration(milliseconds: 140),
-                                curve: Curves.easeOutCubic,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _pressed
-                                      ? BrewColor.sage.withValues(alpha: 0.40)
-                                      : (_configureHovered
-                                          ? BrewColor.sage.withValues(alpha: 0.28)
-                                          : BrewColor.sage.withValues(alpha: 0.12)),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: _pressed
-                                        ? BrewColor.sageLight
-                                        : (_configureHovered
-                                            ? BrewColor.sageLight
-                                            : BrewColor.sage.withValues(alpha: 0.35)),
-                                    width: 1.0,
-                                  ),
-                                  boxShadow: (_pressed || _configureHovered)
-                                      ? [
-                                          BoxShadow(
-                                            color: BrewColor.sage.withValues(
-                                              alpha: _pressed ? 0.45 : 0.25,
-                                            ),
-                                            blurRadius: _pressed ? 12 : 8,
-                                            spreadRadius: 1,
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Configure',
-                                      style: BrewType.mono.copyWith(
-                                        fontSize: 11,
-                                        letterSpacing: 0.8,
-                                        fontWeight: FontWeight.w600,
-                                        color: BrewColor.cream,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    AnimatedSlide(
-                                      duration: reduced
-                                          ? Duration.zero
-                                          : const Duration(milliseconds: 140),
-                                      curve: Curves.easeOutCubic,
-                                      offset: Offset(
-                                        (_pressed || _configureHovered) ? 0.30 : 0.0,
-                                        0.0,
-                                      ),
-                                      child: const Icon(
-                                        Icons.arrow_forward_rounded,
-                                        size: 13,
-                                        color: BrewColor.sageLight,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: identity),
+                      const SizedBox(width: BrewSpace.grid),
+                      actions,
+                    ],
+                  );
+                },
               ),
             ),
           ),
@@ -773,11 +803,7 @@ class _UnattendedBadge extends StatelessWidget {
         color: BrewColor.sage,
         borderRadius: BorderRadius.circular(999),
         boxShadow: const [
-          BoxShadow(
-            color: Color(0x55B7D5B0),
-            blurRadius: 6,
-            spreadRadius: 1,
-          ),
+          BoxShadow(color: Color(0x55B7D5B0), blurRadius: 6, spreadRadius: 1),
         ],
       ),
       child: Row(
@@ -877,7 +903,9 @@ class _ActionRowState extends State<_ActionRow> {
             if (!_isNavigating) setState(() => _pressed = false);
           },
           child: AnimatedScale(
-            duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+            duration: reduced
+                ? Duration.zero
+                : const Duration(milliseconds: 140),
             curve: Curves.easeOutCubic,
             scale: _pressed ? 0.985 : (_hovered ? 1.006 : 1.0),
             child: AnimatedContainer(
@@ -888,14 +916,14 @@ class _ActionRowState extends State<_ActionRow> {
                 color: _pressed
                     ? const Color(0xF5182D20)
                     : (_hovered
-                        ? const Color(0xF216271C)
-                        : const Color(0xEB132218)),
+                          ? const Color(0xF216271C)
+                          : const Color(0xEB132218)),
                 border: Border.all(
                   color: _pressed
                       ? BrewColor.fieldFocus
                       : (_hovered
-                          ? BrewColor.cream.withValues(alpha: 0.22)
-                          : BrewColor.cream.withValues(alpha: 0.12)),
+                            ? BrewColor.cream.withValues(alpha: 0.22)
+                            : BrewColor.cream.withValues(alpha: 0.12)),
                   width: 1.0,
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -953,7 +981,9 @@ class _ActionRowState extends State<_ActionRow> {
                   ),
                   const SizedBox(width: BrewSpace.grid),
                   AnimatedContainer(
-                    duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                    duration: reduced
+                        ? Duration.zero
+                        : const Duration(milliseconds: 140),
                     curve: Curves.easeOutCubic,
                     width: 32,
                     height: 32,
@@ -979,7 +1009,9 @@ class _ActionRowState extends State<_ActionRow> {
                           : null,
                     ),
                     child: AnimatedSlide(
-                      duration: reduced ? Duration.zero : const Duration(milliseconds: 140),
+                      duration: reduced
+                          ? Duration.zero
+                          : const Duration(milliseconds: 140),
                       curve: Curves.easeOutCubic,
                       offset: Offset((_pressed || _hovered) ? 0.25 : 0.0, 0.0),
                       child: const Icon(

@@ -14,6 +14,7 @@ import '../widgets/brew_field.dart';
 import '../widgets/brew_reveal.dart';
 import '../widgets/cup_mark.dart';
 import '../widgets/stagger.dart';
+import '../widgets/brew_transitions.dart';
 
 /// Where Create an account goes.
 ///
@@ -35,11 +36,7 @@ import '../widgets/stagger.dart';
 /// shape checks: whether an address is already taken is not something this screen
 /// can know, and it does not pretend to.
 class CreateAccountScreen extends StatefulWidget {
-  const CreateAccountScreen({
-    super.key,
-    this.onSubmit,
-    this.onLogIn,
-  });
+  const CreateAccountScreen({super.key, this.onSubmit, this.onLogIn});
 
   /// Fired with a trimmed name and email and the raw password. Resolves to null
   /// when the account exists, or to the failure to hang on the form.
@@ -47,7 +44,8 @@ class CreateAccountScreen extends StatefulWidget {
     String name,
     String email,
     String password,
-  )? onSubmit;
+  )?
+  onSubmit;
 
   /// The footer: the reader is already registered and took a wrong turn.
   final VoidCallback? onLogIn;
@@ -60,20 +58,13 @@ class CreateAccountScreen extends StatefulWidget {
       String name,
       String email,
       String password,
-    )? onSubmit,
+    )?
+    onSubmit,
     VoidCallback? onLogIn,
   }) {
-    final duration = reduced ? Duration.zero : BrewMotion.transit;
-    return PageRouteBuilder<void>(
-      transitionDuration: duration,
-      reverseTransitionDuration: duration,
-      pageBuilder: (context, animation, secondaryAnimation) =>
-          CreateAccountScreen(onSubmit: onSubmit, onLogIn: onLogIn),
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
-      ),
+    return brewPageRoute<void>(
+      reduced: reduced,
+      child: CreateAccountScreen(onSubmit: onSubmit, onLogIn: onLogIn),
     );
   }
 
@@ -206,41 +197,45 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         color: BrewColor.field,
         child: BrewBackground(
           child: StaggerGroup(
-              itemCount: _staggerCount,
-              reveal: true,
-              reduced: reduced,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final padding = EdgeInsets.only(
-                    left: BrewSpace.gutter,
-                    right: BrewSpace.gutter,
-                    top: math.max(media.padding.top, BrewSpace.minInset) +
-                        BrewSpace.headerClearance,
-                    bottom: math.max(
-                          media.padding.bottom,
-                          BrewSpace.bottomGroupInset,
-                        ) +
-                        media.viewInsets.bottom,
-                  );
+            itemCount: _staggerCount,
+            reveal: true,
+            reduced: reduced,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final padding = EdgeInsets.only(
+                  left: BrewSpace.gutter,
+                  right: BrewSpace.gutter,
+                  top:
+                      math.max(media.padding.top, BrewSpace.minInset) +
+                      BrewSpace.headerClearance,
+                  bottom:
+                      math.max(
+                        media.padding.bottom,
+                        BrewSpace.bottomGroupInset,
+                      ) +
+                      media.viewInsets.bottom,
+                );
 
-                  final minHeight =
-                      math.max(0.0, constraints.maxHeight - padding.vertical);
+                final minHeight = math.max(
+                  0.0,
+                  constraints.maxHeight - padding.vertical,
+                );
 
-                  return SingleChildScrollView(
-                    padding: padding,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: minHeight),
-                      child: IntrinsicHeight(
-                        child: AutofillGroup(child: _form(compact)),
-                      ),
+                return SingleChildScrollView(
+                  padding: padding,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: minHeight),
+                    child: IntrinsicHeight(
+                      child: AutofillGroup(child: _form(compact)),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _form(bool compact) {
@@ -253,11 +248,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
           index: 1,
           child: Row(
             children: [
-              Container(
-                width: 18,
-                height: 1.5,
-                color: BrewColor.sageLight,
-              ),
+              Container(width: 18, height: 1.5, color: BrewColor.sageLight),
               const SizedBox(width: 8),
               Text(
                 'GOOD COFFEE. BETTER DAYS.',
@@ -462,7 +453,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         child: GestureDetector(
           onTap: () => setState(() => _obscure = !_obscure),
           child: Icon(
-            _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            _obscure
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
             size: 20,
             color: BrewColor.cream.withValues(alpha: 0.75),
           ),
