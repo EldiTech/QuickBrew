@@ -23,8 +23,8 @@ import 'support/settle.dart';
 /// separates them here and on a screen reader, which makes this the finder that
 /// tests the thing that actually distinguishes the controls.
 Finder _upload(String semanticsLabel) => find.byWidgetPredicate(
-      (widget) => widget is Text && widget.semanticsLabel == semanticsLabel,
-    );
+  (widget) => widget is Text && widget.semanticsLabel == semanticsLabel,
+);
 
 void main() {
   setUpAll(loadBrandFonts);
@@ -60,11 +60,14 @@ void main() {
     // asynchronously — so the first build has no data and the second one does.
     // That second build is where a controller write would land on an already
     // mounted TextField and mark it dirty mid-build.
-    await pump(tester, shopA: {
-      'name': 'Brew Lab',
-      'description': 'Single origin, poured slow',
-      'open': true,
-    });
+    await pump(
+      tester,
+      shopA: {
+        'name': 'Brew Lab',
+        'description': 'Single origin, poured slow',
+        'open': true,
+      },
+    );
 
     await settle(tester);
 
@@ -77,8 +80,9 @@ void main() {
     expect(find.text('Single origin, poured slow'), findsOneWidget);
   });
 
-  testWidgets('falls back to the built-in copy when the document has no name',
-      (tester) async {
+  testWidgets('falls back to the built-in copy when the document has no name', (
+    tester,
+  ) async {
     await pump(tester, shopA: {'open': true});
     await settle(tester);
 
@@ -91,7 +95,10 @@ void main() {
     await settle(tester);
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Store Identity & Branding'.toUpperCase()), findsOneWidget);
+    expect(
+      find.text('Store Identity & Branding'.toUpperCase()),
+      findsOneWidget,
+    );
     // A shop with no document has no picture either, and Upload rather than
     // Replace is how the picture tile says so. Found by its semantics label
     // rather than by the word: the payment QR tile below it draws an identical
@@ -147,18 +154,53 @@ void main() {
     );
   });
 
-  testWidgets('an order waiting on the shop shows as a badge on the Orders tile',
-      (tester) async {
+  testWidgets(
+    'an order waiting on the shop shows as a badge on the Orders tile',
+    (tester) async {
+      final db = await pump(tester, shopA: {'name': 'Brew Lab', 'open': true});
+      await db.collection('orders').doc('waiting').set({
+        'uid': 'reader-1',
+        'shop': 'coffee-shop-a',
+        'items': ['Bun'],
+        'stage': 'received',
+        'pickupName': 'Alex',
+      });
+      await settle(tester);
+
+      expect(find.text('1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('the completed orders tile opens this store\'s order history', (
+    tester,
+  ) async {
     final db = await pump(tester, shopA: {'name': 'Brew Lab', 'open': true});
-    await db.collection('orders').doc('waiting').set({
+    await db.collection('orders').doc('done-a').set({
       'uid': 'reader-1',
       'shop': 'coffee-shop-a',
-      'items': ['Bun'],
-      'stage': 'received',
-      'pickupName': 'Alex',
+      'items': ['Iced Latte'],
+      'stage': 'completed',
+      'totalCents': 8500,
+      'pickupName': 'Brew Lab Customer',
+    });
+    await db.collection('orders').doc('done-b').set({
+      'uid': 'reader-2',
+      'shop': 'coffee-shop-b',
+      'items': ['Americano'],
+      'stage': 'completed',
+      'totalCents': 6000,
+      'pickupName': 'Other Store Customer',
     });
     await settle(tester);
 
-    expect(find.text('1'), findsOneWidget);
+    final completed = find.text('View completed orders');
+    expect(completed, findsOneWidget);
+    await tester.ensureVisible(completed);
+    await tester.tap(completed);
+    await settle(tester);
+
+    expect(find.text('Completed transactions.'), findsOneWidget);
+    expect(find.text('Brew Lab Customer'), findsOneWidget);
+    expect(find.text('Other Store Customer'), findsNothing);
   });
 }

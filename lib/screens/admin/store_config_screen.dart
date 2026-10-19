@@ -17,6 +17,7 @@ import '../../widgets/stagger.dart';
 import 'admin_addons_screen.dart';
 import 'admin_menu_screen.dart';
 import 'admin_orders_screen.dart';
+import 'admin_transaction_logs_screen.dart';
 import 'admin_transitions.dart';
 import 'admin_whole_menu_screen.dart';
 
@@ -347,6 +348,17 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
     Navigator.of(context).push(
       AdminOrdersScreen.route(
         reduced: MediaQuery.disableAnimationsOf(context),
+        partner: widget.partner,
+        admin: widget.admin,
+      ),
+    );
+  }
+
+  void _openCompletedOrders(BuildContext context) {
+    Navigator.of(context).push(
+      AdminTransactionLogsScreen.route(
+        reduced: MediaQuery.disableAnimationsOf(context),
+        kind: AdminTransactionLogKind.completed,
         partner: widget.partner,
         admin: widget.admin,
       ),
@@ -717,14 +729,38 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
   }
 
   Widget _buildOperationsSection(BrewShop preview, BuildContext context) {
-    return _responsiveCardPair(
-      _ordersCard(context),
-      _hoursCard(preview.status),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cards = [
+          _ordersCard(context),
+          _completedOrdersCard(context),
+          _hoursCard(preview.status),
+        ];
+        if (constraints.maxWidth < 560) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final (index, card) in cards.indexed) ...[
+                if (index > 0) const SizedBox(height: BrewSpace.grid * 2),
+                card,
+              ],
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            _responsiveCardPair(cards[0], cards[1]),
+            const SizedBox(height: BrewSpace.grid * 2),
+            _hoursCard(preview.status),
+          ],
+        );
+      },
     );
   }
 
-  /// Store actions use a fixed two-column grid: Live Orders / Hours on the
-  /// first row, then The Board / Add-ons on the second row.
+  /// Store operations use a two-column grid on wide frames and one full-width
+  /// card per row on phones.
   Widget _responsiveCardPair(Widget first, Widget second) {
     return IntrinsicHeight(
       child: Row(
@@ -825,29 +861,51 @@ class _StoreConfigScreenState extends State<StoreConfigScreen> {
                 ),
               ),
               const SizedBox(height: BrewSpace.grid * 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      'View orders',
-                      style: BrewType.mono.copyWith(
-                        fontSize: 11,
-                        letterSpacing: 1.1,
-                        fontWeight: FontWeight.w600,
-                        color: BrewColor.sageLight,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 14,
-                    color: BrewColor.sageLight,
-                  ),
-                ],
+              const _CardLinkLabel('View orders'),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _completedOrdersCard(BuildContext context) {
+    return StreamBuilder<List<BrewOrder>>(
+      stream: _orders,
+      builder: (context, snapshot) {
+        final completed = (snapshot.data ?? const <BrewOrder>[])
+            .where((order) => order.stage == BrewOrderStage.completed)
+            .length;
+
+        return _AdminGlassCard(
+          label: 'Completed Orders',
+          icon: Icons.task_alt_rounded,
+          onTap: widget.admin == null
+              ? null
+              : () => _openCompletedOrders(context),
+          semanticsLabel: completed == 0
+              ? 'Completed orders. View this shop\'s completed order history.'
+              : 'Completed orders. $completed completed. View this shop\'s completed order history.',
+          trailing: completed > 0 ? _CountBadge(count: completed) : null,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                completed == 0 ? 'Order history' : '$completed completed',
+                style: BrewType.rowTitle.copyWith(fontSize: 15),
               ),
+              const SizedBox(height: 4),
+              Text(
+                completed == 0
+                    ? 'Completed customer orders appear here'
+                    : 'Completed customer orders ready to review',
+                style: BrewType.rowBody.copyWith(
+                  fontSize: 12,
+                  color: BrewColor.cream.withValues(alpha: 0.65),
+                ),
+              ),
+              const SizedBox(height: BrewSpace.grid * 2),
+              const _CardLinkLabel('View completed orders'),
             ],
           ),
         );
@@ -1523,6 +1581,39 @@ class _OpenToggleState extends State<_OpenToggle> {
 }
 
 /// A count badge for unattended orders.
+class _CardLinkLabel extends StatelessWidget {
+  const _CardLinkLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            style: BrewType.mono.copyWith(
+              fontSize: 11,
+              letterSpacing: 1.1,
+              fontWeight: FontWeight.w600,
+              color: BrewColor.sageLight,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 4),
+        const Icon(
+          Icons.arrow_forward_rounded,
+          size: 14,
+          color: BrewColor.sageLight,
+        ),
+      ],
+    );
+  }
+}
+
 class _CountBadge extends StatelessWidget {
   const _CountBadge({required this.count});
 

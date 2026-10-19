@@ -12,6 +12,7 @@ import '../../widgets/brew_sheet.dart';
 import '../../widgets/shop_mark.dart';
 import '../../widgets/stagger.dart';
 import 'invite_admin_screen.dart';
+import 'admin_profit_screen.dart';
 import 'store_config_screen.dart';
 import 'users_screen.dart';
 
@@ -125,7 +126,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     // are known synchronously from the profile, before any Firestore snapshot
     // arrives.
     final stores = _stores;
-    const storeBase = 4; // masthead, display line, subtitle, stores eyebrow
+    const reportsBase = 3; // masthead, display line, subtitle
+    const storeEyebrow = reportsBase + 2;
+    const storeBase = storeEyebrow + 1;
     final teamBase = storeBase + stores.length;
     final staggerCount = teamBase + (_superadmin ? 3 : 0);
 
@@ -203,7 +206,26 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               ),
               SizedBox(height: brewBlockGap(compact)),
               StaggerItem(
-                index: 3,
+                index: reportsBase,
+                child: const _SectionLabel(
+                  'Financial reports',
+                  icon: Icons.insights_rounded,
+                ),
+              ),
+              const SizedBox(height: BrewSpace.grid * 1.5),
+              StaggerItem(
+                index: reportsBase + 1,
+                child: _ActionRow(
+                  icon: Icons.account_balance_rounded,
+                  label: 'Profit report',
+                  detail:
+                      'See completed sales, platform fees, and net shop profit.',
+                  onTap: () => _openProfit(context),
+                ),
+              ),
+              SizedBox(height: brewBlockGap(compact)),
+              StaggerItem(
+                index: storeEyebrow,
                 child: _SectionLabel(
                   _superadmin ? 'Your stores' : 'Your store',
                   icon: Icons.storefront_rounded,
@@ -253,6 +275,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     );
                   },
                 ),
+              SizedBox(height: brewBlockGap(compact)),
               if (_superadmin) ...[
                 SizedBox(height: brewBlockGap(compact)),
                 StaggerItem(
@@ -312,6 +335,16 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         // So the roster can tell which row is the reader's own and withhold the
         // two controls that would lock them out of their own role.
         currentUid: widget.profile.uid,
+      ),
+    );
+  }
+
+  void _openProfit(BuildContext context) {
+    Navigator.of(context).push(
+      AdminProfitScreen.route(
+        reduced: MediaQuery.disableAnimationsOf(context),
+        partners: _stores,
+        admin: widget.admin,
       ),
     );
   }

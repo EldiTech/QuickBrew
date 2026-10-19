@@ -35,6 +35,7 @@ class BrewSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
+    final contentWidth = brewPageContentWidth(media.size.width);
 
     return StaggerGroup(
       itemCount: staggerCount,
@@ -42,22 +43,46 @@ class BrewSheet extends StatelessWidget {
       reduced: MediaQuery.disableAnimationsOf(context),
       child: SingleChildScrollView(
         padding: EdgeInsets.only(
-          left: BrewSpace.gutter,
-          right: BrewSpace.gutter,
-          top: math.max(media.padding.top, BrewSpace.minInset) +
+          top:
+              math.max(media.padding.top, BrewSpace.minInset) +
               BrewSpace.headerClearance,
           // The nav owns the bottom safe area, so the sheet only owes the last
           // block a little air above it.
           bottom: BrewSpace.grid * 4,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: children,
+        child: Center(
+          child: SizedBox(
+            width: contentWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
+          ),
         ),
       ),
     );
   }
 }
+
+/// Horizontal breathing room that protects the narrowest supported phones
+/// without making the normal handset layouts feel compressed.
+///
+/// The desktop/tablet viewport is intentionally capped by
+/// [brewPageContentWidth] rather than being allowed to stretch ledger rows and
+/// forms across the full display.
+double brewPageGutter(double viewportWidth) {
+  if (viewportWidth <= 360) return BrewSpace.grid * 2;
+  if (viewportWidth <= 430) return BrewSpace.gutter - BrewSpace.grid / 2;
+  return BrewSpace.gutter;
+}
+
+/// Width shared by the sheet pages and the checkout footer/body.
+///
+/// 720 keeps paragraphs, payment choices, and admin figures legible on the
+/// landscape tablet presets while every phone still uses all available space
+/// inside its responsive gutter.
+double brewPageContentWidth(double viewportWidth) =>
+    math.min(viewportWidth - brewPageGutter(viewportWidth) * 2, 720);
 
 /// The cup and the wordmark, as the splash puts them down and as the login and
 /// create-account screens repeat them.

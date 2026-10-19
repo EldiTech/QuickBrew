@@ -18,20 +18,30 @@ enum AdminTransactionLogKind { pending, completed }
 /// The superadmin's transaction ledger, split into pending and completed
 /// destinations so history never competes with the live queue.
 class AdminTransactionLogsScreen extends StatefulWidget {
-  const AdminTransactionLogsScreen({super.key, required this.kind, this.admin});
+  const AdminTransactionLogsScreen({
+    super.key,
+    required this.kind,
+    this.partner,
+    this.admin,
+  });
 
   final AdminTransactionLogKind kind;
+  final BrewPartner? partner;
   final BrewAdmin? admin;
 
   static Route<void> route({
     bool reduced = false,
     required AdminTransactionLogKind kind,
+    BrewPartner? partner,
     BrewAdmin? admin,
   }) {
     return adminPageRoute<void>(
       reduced: reduced,
-      builder: (context) =>
-          AdminTransactionLogsScreen(kind: kind, admin: admin),
+      builder: (context) => AdminTransactionLogsScreen(
+        kind: kind,
+        partner: partner,
+        admin: admin,
+      ),
     );
   }
 
@@ -42,7 +52,14 @@ class AdminTransactionLogsScreen extends StatefulWidget {
 
 class _AdminTransactionLogsScreenState
     extends State<AdminTransactionLogsScreen> {
-  late final Stream<List<BrewOrder>>? _orders = widget.admin?.allOrders();
+  late final Stream<List<BrewOrder>>? _orders = _orderStream();
+
+  Stream<List<BrewOrder>>? _orderStream() {
+    final admin = widget.admin;
+    if (admin == null) return null;
+    final partner = widget.partner;
+    return partner == null ? admin.allOrders() : admin.ordersFor(partner);
+  }
 
   bool get _completed => widget.kind == AdminTransactionLogKind.completed;
 
@@ -176,6 +193,7 @@ class _AdminTransactionLogsScreenState
                     AdminTransactionLogsScreen.route(
                       reduced: reduced,
                       kind: AdminTransactionLogKind.pending,
+                      partner: widget.partner,
                       admin: widget.admin,
                     ),
                   )
@@ -193,6 +211,7 @@ class _AdminTransactionLogsScreenState
                     AdminTransactionLogsScreen.route(
                       reduced: reduced,
                       kind: AdminTransactionLogKind.completed,
+                      partner: widget.partner,
                       admin: widget.admin,
                     ),
                   )

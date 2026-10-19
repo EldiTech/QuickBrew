@@ -1849,82 +1849,90 @@ class _OrderWizardScreenState extends State<OrderWizardScreen> {
     required bool compact,
     required bool reduced,
   }) {
+    final contentWidth = brewPageContentWidth(media.size.width);
     return Column(
       children: [
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.only(
-              left: BrewSpace.gutter,
-              right: BrewSpace.gutter,
               top:
                   math.max(media.padding.top, BrewSpace.minInset) +
                   BrewSpace.headerClearance,
               bottom: BrewSpace.grid * 3,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _header(context),
-                if (_connectivityKnown && _offline) ...[
-                  const SizedBox(height: BrewSpace.grid * 1.5),
-                  const _OfflineBanner(),
-                ],
-                SizedBox(height: brewBlockGap(compact)),
-                _StepRule(step: _step, reduced: reduced),
-                const SizedBox(height: BrewSpace.grid * 2),
-                Text(
-                  _placed ? 'Order placed' : _step.heading,
-                  style: BrewType.displayAt(compact ? 26 : 30),
-                ),
-                const SizedBox(height: BrewSpace.grid * 3),
-                // Keyed on the step so the body cross-fades as the reader
-                // walks the flow, rather than the new step's content
-                // appearing inside the old one's box. Reduced motion gets
-                // the cut, which is what it asked for.
-                AnimatedSwitcher(
-                  duration: reduced ? Duration.zero : BrewMotion.tabTransition,
-                  switchInCurve: BrewMotion.crossFadeCurve,
-                  switchOutCurve: BrewMotion.crossFadeCurve,
-                  transitionBuilder: (child, animation) {
-                    final curved = CurvedAnimation(
-                      parent: animation,
-                      curve: BrewMotion.crossFadeCurve,
-                    );
-                    return FadeTransition(
-                      opacity: curved,
-                      child: SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(0, 0.018),
-                          end: Offset.zero,
-                        ).animate(curved),
-                        child: child,
-                      ),
-                    );
-                  },
-                  layoutBuilder: (current, previous) => Stack(
-                    alignment: AlignmentDirectional.topStart,
-                    children: [
-                      for (final child in previous)
-                        ExcludeSemantics(child: IgnorePointer(child: child)),
-                      ?current,
+            child: Center(
+              child: SizedBox(
+                width: contentWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _header(context),
+                    if (_connectivityKnown && _offline) ...[
+                      const SizedBox(height: BrewSpace.grid * 1.5),
+                      const _OfflineBanner(),
                     ],
-                  ),
-                  // The group is inside the key, not around the switcher: a
-                  // new step is a new StaggerGroup with its own controller,
-                  // which is what makes the entrance replay on every step
-                  // rather than once for the first one. Its length is the
-                  // step's own row count — see [_bodyLength].
-                  child: KeyedSubtree(
-                    key: ValueKey((_step, _placed)),
-                    child: StaggerGroup(
-                      itemCount: _bodyLength,
-                      reveal: true,
-                      reduced: reduced,
-                      child: _body(compact),
+                    SizedBox(height: brewBlockGap(compact)),
+                    _StepRule(step: _step, reduced: reduced),
+                    const SizedBox(height: BrewSpace.grid * 2),
+                    Text(
+                      _placed ? 'Order placed' : _step.heading,
+                      style: BrewType.displayAt(compact ? 26 : 30),
                     ),
-                  ),
+                    const SizedBox(height: BrewSpace.grid * 3),
+                    // Keyed on the step so the body cross-fades as the reader
+                    // walks the flow, rather than the new step's content
+                    // appearing inside the old one's box. Reduced motion gets
+                    // the cut, which is what it asked for.
+                    AnimatedSwitcher(
+                      duration: reduced
+                          ? Duration.zero
+                          : BrewMotion.tabTransition,
+                      switchInCurve: BrewMotion.crossFadeCurve,
+                      switchOutCurve: BrewMotion.crossFadeCurve,
+                      transitionBuilder: (child, animation) {
+                        final curved = CurvedAnimation(
+                          parent: animation,
+                          curve: BrewMotion.crossFadeCurve,
+                        );
+                        return FadeTransition(
+                          opacity: curved,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.018),
+                              end: Offset.zero,
+                            ).animate(curved),
+                            child: child,
+                          ),
+                        );
+                      },
+                      layoutBuilder: (current, previous) => Stack(
+                        alignment: AlignmentDirectional.topStart,
+                        children: [
+                          for (final child in previous)
+                            ExcludeSemantics(
+                              child: IgnorePointer(child: child),
+                            ),
+                          ?current,
+                        ],
+                      ),
+                      // The group is inside the key, not around the switcher: a
+                      // new step is a new StaggerGroup with its own controller,
+                      // which is what makes the entrance replay on every step
+                      // rather than once for the first one. Its length is the
+                      // step's own row count — see [_bodyLength].
+                      child: KeyedSubtree(
+                        key: ValueKey((_step, _placed)),
+                        child: StaggerGroup(
+                          itemCount: _bodyLength,
+                          reveal: true,
+                          reduced: reduced,
+                          child: _body(compact),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -2933,14 +2941,13 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final contentWidth = brewPageContentWidth(media.size.width);
     return Container(
       decoration: BoxDecoration(
         color: BrewColor.field,
         border: Border(top: BorderSide(color: BrewColor.hairline)),
       ),
       padding: EdgeInsets.only(
-        left: BrewSpace.gutter,
-        right: BrewSpace.gutter,
         top: BrewSpace.grid * 2,
         // The keyboard's inset is added to the safe area rather than replacing
         // it, so the action bar rides above an open keyboard instead of sitting
@@ -2949,7 +2956,9 @@ class _Footer extends StatelessWidget {
             math.max(media.padding.bottom, BrewSpace.grid * 2) +
             media.viewInsets.bottom,
       ),
-      child: child,
+      child: Center(
+        child: SizedBox(width: contentWidth, child: child),
+      ),
     );
   }
 }
